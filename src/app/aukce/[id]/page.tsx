@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BidPanel } from "./bid-panel";
 
+export const dynamic = "force-dynamic";
+
 const money = (n: number) =>
   new Intl.NumberFormat("cs-CZ", {
     style: "currency",

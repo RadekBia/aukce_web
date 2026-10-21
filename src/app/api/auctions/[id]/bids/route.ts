@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const bidSchema = z.object({
   // Local-dev identity only — not production auth. Stored in Bid.bidderId.
