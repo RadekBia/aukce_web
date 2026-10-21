@@ -35,8 +35,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Notes |
 |----------|----------|-------|
-| `DATABASE_URL` | yes | Prisma Postgres URL |
+| `DATABASE_URL` | yes | Prisma Postgres URL (local or Railway public URL) |
 | `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Set to `true` only for local API testing of `POST /api/auctions`. UI create form stays gated. |
+
+For **Railway Postgres**: create a Postgres plugin in a Railway project, copy `DATABASE_URL` into local `.env` (or set `RAILWAY_TOKEN` so the CLI can pull vars), then `npx prisma migrate deploy` and `npm run db:seed`. Do not commit secrets. Auth / Google SSO is deferred.
 
 No auth provider, payments, or email services are wired yet.
 
