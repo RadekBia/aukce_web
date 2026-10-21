@@ -44,6 +44,6 @@ No auth provider, payments, or email services are wired yet.
 
 ## Known gaps
 
-- Auction detail route `/aukce/[id]` is linked from the home page but not implemented (404).
 - Creating auctions via UI is intentionally disabled until login/authorization exists.
 - Bidding UI/API is not implemented yet (schema has `Bid`).
+- Railway deploy and Google SSO are deferred; local Postgres is the supported path for now.
