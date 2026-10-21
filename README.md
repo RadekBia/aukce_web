@@ -42,8 +42,14 @@ For **Railway Postgres**: create a Postgres plugin in a Railway project, copy `D
 
 No auth provider, payments, or email services are wired yet.
 
+## Bidding (local-dev)
+
+On `/aukce/[id]`, enter a name or e-mail and an amount higher than the current price.
+`POST /api/auctions/:id/bids` with `{ "bidder", "amount" }` stores `bidder` in `Bid.bidderId`.
+This is **not** secure production identity — Google SSO remains deferred.
+
 ## Known gaps
 
 - Creating auctions via UI is intentionally disabled until login/authorization exists.
-- Bidding UI/API is not implemented yet (schema has `Bid`).
+- Bidder field is free-text (no verified identity yet).
 - Railway deploy and Google SSO are deferred; local Postgres is the supported path for now.

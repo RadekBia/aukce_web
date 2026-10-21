@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { BidPanel } from "./bid-panel";
 
 const money = (n: number) =>
   new Intl.NumberFormat("cs-CZ", {
@@ -23,14 +24,23 @@ export default async function AuctionDetail({
 }) {
   const { id } = await params;
   let auction;
+  let bids: Awaited<ReturnType<typeof prisma.bid.findMany>> = [];
   try {
     auction = await prisma.auction.findUnique({ where: { id } });
+    if (auction) {
+      bids = await prisma.bid.findMany({
+        where: { auctionId: id },
+        orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
+        take: 50,
+      });
+    }
   } catch {
     notFound();
   }
   if (!auction) notFound();
 
   const ended = auction.endsAt.getTime() <= Date.now();
+  const canBid = auction.status === "ACTIVE" && !ended;
   const endsLabel = auction.endsAt.toLocaleString("cs-CZ", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -83,11 +93,20 @@ export default async function AuctionDetail({
           </p>
           <h2>Popis</h2>
           <p className="detail-desc">{auction.description}</p>
-          <p className="notice">
-            Přihazování bude dostupné po doplnění přihlášení. Zatím si můžete
-            aukci prohlédnout.
-          </p>
-          <Link className="btn" href="/#aukce">
+
+          <BidPanel
+            auctionId={auction.id}
+            currentPrice={auction.currentPrice}
+            canBid={canBid}
+            initialBids={bids.map((b) => ({
+              id: b.id,
+              bidderId: b.bidderId,
+              amount: b.amount,
+              createdAt: b.createdAt.toISOString(),
+            }))}
+          />
+
+          <Link className="btn secondary" href="/#aukce">
             Další aukce
           </Link>
         </div>
