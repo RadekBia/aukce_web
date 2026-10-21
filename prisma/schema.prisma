@@ -1,1 +1,46 @@
-generator client { provider = "prisma-client-js" }\ndatasource db { provider = "postgresql" url = env("DATABASE_URL") }\nenum AuctionStatus { DRAFT ACTIVE ENDED CANCELLED }\nmodel Auction { id String @id @default(cuid()) title String @db.VarChar(120) description String @db.Text category String @db.VarChar(60) condition String @db.VarChar(40) imageUrl String? @db.Text startingPrice Int currentPrice Int status AuctionStatus @default(ACTIVE) startsAt DateTime @default(now()) endsAt DateTime createdAt DateTime @default(now()) updatedAt DateTime @updatedAt bids Bid[] @@index([status, endsAt]) @@index([category]) }\nmodel Bid { id String @id @default(cuid()) auctionId String bidderId String amount Int createdAt DateTime @default(now()) auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade) @@index([auctionId, amount]) }\n
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuctionStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+model Auction {
+  id            String        @id @default(cuid())
+  title         String        @db.VarChar(120)
+  description   String        @db.Text
+  category      String        @db.VarChar(60)
+  condition     String        @db.VarChar(40)
+  imageUrl      String?       @db.Text
+  startingPrice Int
+  currentPrice  Int
+  status        AuctionStatus @default(ACTIVE)
+  startsAt      DateTime      @default(now())
+  endsAt        DateTime
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  bids          Bid[]
+
+  @@index([status, endsAt])
+  @@index([category])
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  auctionId String
+  bidderId  String
+  amount    Int
+  createdAt DateTime @default(now())
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId, amount])
+}

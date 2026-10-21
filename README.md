@@ -1,1 +1,47 @@
+# Aukceee na dobrou Věc
 
+Next.js 15 + Prisma auction listing app (Czech UI).
+
+## Requirements
+
+- Node.js 20+ (tested with 22)
+- PostgreSQL 14+
+
+## Quick start
+
+```bash
+cp .env.example .env
+# edit DATABASE_URL to point at your Postgres database
+
+npm install
+npx prisma migrate deploy   # or: npm run db:migrate  (dev)
+npm run db:seed             # sample auctions (idempotent if table already has rows)
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Next.js development server |
+| `npm run build` / `npm start` | Production build + start |
+| `npm run db:migrate` | `prisma migrate dev` |
+| `npm run db:deploy` | `prisma migrate deploy` |
+| `npm run db:seed` | Insert sample auctions |
+
+## Environment
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `DATABASE_URL` | yes | Prisma Postgres URL |
+| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Set to `true` only for local API testing of `POST /api/auctions`. UI create form stays gated. |
+
+No auth provider, payments, or email services are wired yet.
+
+## Known gaps
+
+- Auction detail route `/aukce/[id]` is linked from the home page but not implemented (404).
+- Creating auctions via UI is intentionally disabled until login/authorization exists.
+- Bidding UI/API is not implemented yet (schema has `Bid`).
