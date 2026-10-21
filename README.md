@@ -36,7 +36,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Required | Notes |
 |----------|----------|-------|
 | `DATABASE_URL` | yes | Prisma Postgres URL (local or Railway public URL) |
-| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Set to `true` **only for local/dev** to unlock `/aukce/nova` and `POST /api/auctions`. Keep unset in production/shared envs. Restart `npm run dev` after changing. |
+| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Server-only (see `src/lib/flags.ts`). `true` unlocks `/aukce/nova` + `POST /api/auctions`. Unset → ON in development, OFF in production. Set `false` to force off. Never `true` in prod. Restart `npm run dev` after changing. |
 
 Auth / Google SSO and Railway deploy are deferred. Do not commit `.env` or enable the create flag outside local testing.
 
@@ -50,6 +50,6 @@ This is **not** secure production identity — Google SSO remains deferred.
 
 ## Known gaps
 
-- Creating auctions via UI is intentionally disabled until login/authorization exists.
+- Create-auction without login is a **local-only** escape hatch (`ENABLE_UNAUTHENTICATED_AUCTION_CREATION`); not safe for production.
 - Bidder field is free-text (no verified identity yet).
 - Railway deploy and Google SSO are deferred; local Postgres is the supported path for now.
