@@ -5,13 +5,13 @@ Next.js 15 + Prisma auction listing app (Czech UI).
 ## Requirements
 
 - Node.js 20+ (tested with 22)
-- PostgreSQL 14+
+- PostgreSQL 14+ (local) or **Neon** (hosted)
 
-## Quick start
+## Quick start (local)
 
 ```bash
 cp .env.example .env
-# edit DATABASE_URL to point at your Postgres database
+# set DATABASE_URL and DIRECT_URL (same value for local Postgres)
 
 npm install
 npx prisma migrate deploy   # or: npm run db:migrate  (dev)
@@ -26,7 +26,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | Script | Purpose |
 |--------|---------|
 | `npm run dev` | Next.js development server |
-| `npm run build` / `npm start` | Production build + start |
+| `npm run build` | `prisma generate` → `prisma migrate deploy` → `next build` (Vercel-safe; migrate at **build** time, not cold start) |
+| `npm start` | `next start` (local/prod Node host) |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:deploy` | `prisma migrate deploy` |
 | `npm run db:seed` | Insert sample auctions |
@@ -35,12 +36,21 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Notes |
 |----------|----------|-------|
-| `DATABASE_URL` | yes | Prisma Postgres URL (local or Railway public URL) |
-| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Server-only (see `src/lib/flags.ts`). `true` unlocks `/aukce/nova` + `POST /api/auctions`. Unset → ON in development, OFF in production. Set `false` to force off. Never `true` in prod. Restart `npm run dev` after changing. |
+| `DATABASE_URL` | yes | Pooled Postgres URL (Neon pooled / local) |
+| `DIRECT_URL` | yes | Direct Postgres URL for migrations (Neon direct; locally = `DATABASE_URL`) |
+| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Server-only (`src/lib/flags.ts`). Never `true` on Vercel Production. |
 
-Auth / Google SSO and Railway deploy are deferred. Do not commit `.env` or enable the create flag outside local testing.
+### Neon + Vercel
 
-No auth provider, payments, or email services are wired yet.
+1. Neon dashboard → copy **pooled** → `DATABASE_URL`, **direct** → `DIRECT_URL`.
+2. Vercel project → Env vars (Production + Preview): paste both. Do **not** set the create-auction flag in Production.
+3. Deploy from this PR branch / after merge. Build runs migrate deploy once per deploy.
+4. Optional seed from laptop: `DATABASE_URL=… DIRECT_URL=… npm run db:seed`
+5. Smoke: `/`, `/api/auctions`, `/aukce/nova` (create stays off in prod unless you intentionally set the flag on Preview).
+
+Full runbook: project store `docs/aukce-setup.md`.
+
+Google SSO / auth and Railway are out of scope.
 
 ## Bidding (local-dev)
 
@@ -50,6 +60,6 @@ This is **not** secure production identity — Google SSO remains deferred.
 
 ## Known gaps
 
-- Create-auction without login is a **local-only** escape hatch (`ENABLE_UNAUTHENTICATED_AUCTION_CREATION`); not safe for production.
+- Create-auction without login is a **local-only** escape hatch; not safe for production.
 - Bidder field is free-text (no verified identity yet).
-- Railway deploy and Google SSO are deferred; local Postgres is the supported path for now.
+- Google SSO is deferred. Prefer **Neon + Vercel** for hosting (Railway out of scope).

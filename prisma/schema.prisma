@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Neon: use the pooled connection string here (often includes -pooler host / pgbouncer).
+  url       = env("DATABASE_URL")
+  // Neon: use the direct (non-pooled) URL for migrations. Locally, set equal to DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 enum AuctionStatus {
