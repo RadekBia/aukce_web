@@ -1,1 +1,65 @@
-# Aukceee na dobrou Věc — funkční základ\n\nZelenobílý startovací projekt: Next.js, TypeScript, Prisma a PostgreSQL. Obsahuje katalog napojený na databázi, API pro čtení aukcí, databázové schéma aukcí a příhozů a seed ukázkových položek.\n\n## Lokální spuštění\n1. Nainstalujte Node.js a PostgreSQL.\n2. `npm install`\n3. Zkopírujte `.env.example` do `.env` a vyplňte `DATABASE_URL`.\n4. `npx prisma migrate dev --name init`\n5. `npm run db:seed`\n6. `npm run dev` a otevřete http://localhost:3000.\n\n## GitHub\nVytvořte prázdný repozitář a spusťte v této složce:\n```bash\ngit init\ngit add .\ngit commit -m "Initial Aukceee app"\ngit branch -M main\ngit remote add origin https://github.com/VAŠE-JMÉNO/VAŠE-REPO.git\ngit push -u origin main\n```\nNikdy necommitujte `.env` ani přihlašovací údaje.\n\n## Railway\n1. Vytvořte Railway projekt a přidejte PostgreSQL.\n2. Přidejte aplikaci z GitHub repozitáře.\n3. Nastavte `DATABASE_URL` jako referenci na databázovou službu.\n4. Nastavte pre-deploy command `npx prisma migrate deploy`.\n5. Build: `npm run build`; start: `npm run start`.\n6. Jednorázově spusťte `npm run db:seed`, chcete-li ukázkové položky.\n7. Vygenerujte veřejnou doménu.\n\n## Důležité\nNejde ještě o produkčně hotový aukční systém. Registrace, přihlášení, autorizace, skutečné přihazování, upload fotografií, moderace a automatické ukončování aukcí zatím nejsou implementovány. Endpoint pro vytváření aukcí je z bezpečnostních důvodů vypnutý, dokud nebude doplněno přihlášení. Nepovolujte `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` na veřejném serveru.\n
+# Aukceee na dobrou Věc
+
+Next.js 15 + Prisma auction listing app (Czech UI).
+
+## Requirements
+
+- Node.js 20+ (tested with 22)
+- PostgreSQL 14+ (local) or **Neon** (hosted)
+
+## Quick start (local)
+
+```bash
+cp .env.example .env
+# set DATABASE_URL and DIRECT_URL (same value for local Postgres)
+
+npm install
+npx prisma migrate deploy   # or: npm run db:migrate  (dev)
+npm run db:seed             # sample auctions (idempotent if table already has rows)
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Next.js development server |
+| `npm run build` | `prisma generate` → `prisma migrate deploy` → `next build` (Vercel-safe; migrate at **build** time, not cold start) |
+| `npm start` | `next start` (local/prod Node host) |
+| `npm run db:migrate` | `prisma migrate dev` |
+| `npm run db:deploy` | `prisma migrate deploy` |
+| `npm run db:seed` | Insert sample auctions |
+
+## Environment
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `DATABASE_URL` | yes | Pooled Postgres URL (Neon pooled / local) |
+| `DIRECT_URL` | yes | Direct Postgres URL for migrations (Neon direct; locally = `DATABASE_URL`) |
+| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Server-only (`src/lib/flags.ts`). Never `true` on Vercel Production. |
+
+### Neon + Vercel
+
+1. Neon dashboard → copy **pooled** → `DATABASE_URL`, **direct** → `DIRECT_URL`.
+2. Vercel project → Env vars (Production + Preview): paste both. Do **not** set the create-auction flag in Production.
+3. Deploy from this PR branch / after merge. Build runs migrate deploy once per deploy.
+4. Optional seed from laptop: `DATABASE_URL=… DIRECT_URL=… npm run db:seed`
+5. Smoke: `/`, `/api/auctions`, `/aukce/nova` (create stays off in prod unless you intentionally set the flag on Preview).
+
+Full runbook: project store `docs/aukce-setup.md`.
+
+Google SSO / auth and Railway are out of scope.
+
+## Bidding (local-dev)
+
+On `/aukce/[id]`, enter a name or e-mail and an amount higher than the current price.
+`POST /api/auctions/:id/bids` with `{ "bidder", "amount" }` stores `bidder` in `Bid.bidderId`.
+This is **not** secure production identity — Google SSO remains deferred.
+
+## Known gaps
+
+- Create-auction without login is a **local-only** escape hatch; not safe for production.
+- Bidder field is free-text (no verified identity yet).
+- Google SSO is deferred. Prefer **Neon + Vercel** for hosting (Railway out of scope).
