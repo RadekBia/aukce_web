@@ -4,6 +4,7 @@ import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const schema = z.object({
   title: z.string().trim().min(3).max(120),
