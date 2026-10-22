@@ -12,18 +12,26 @@ function parseTriState(raw: string | undefined): boolean | undefined {
 }
 
 /**
- * Unlocks POST /api/auctions and the /aukce/nova form without login.
+ * TEMPORARY until Google SSO / real auth: unauthenticated create is ON by default
+ * (local + production) so the live site can accept new auctions.
  *
- * - Explicit `true` / `1` → ON
- * - Explicit `false` / `0` → OFF
- * - Unset → ON in `development` only (local convenience); OFF in production
+ * Lock early without waiting for SSO:
+ *   ENABLE_UNAUTHENTICATED_AUCTION_CREATION=false
  *
- * Never set this to true in production / shared environments.
+ * When SSO lands: flip `UNAUTHENTICATED_CREATE_UNTIL_SSO` to false (or delete this
+ * path and require a session).
  */
+const UNAUTHENTICATED_CREATE_UNTIL_SSO = true;
+
 export function isUnauthenticatedAuctionCreationEnabled(): boolean {
   const explicit = parseTriState(
     process.env.ENABLE_UNAUTHENTICATED_AUCTION_CREATION,
   );
   if (explicit !== undefined) return explicit;
-  return process.env.NODE_ENV === "development";
+  return UNAUTHENTICATED_CREATE_UNTIL_SSO;
+}
+
+/** True when Vercel Blob can accept uploads (token present at runtime). */
+export function isBlobUploadConfigured(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }

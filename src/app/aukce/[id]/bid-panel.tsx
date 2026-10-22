@@ -48,13 +48,34 @@ export function BidPanel({
     }
   }, []);
 
+  useEffect(() => {
+    setPrice(currentPrice);
+    setAmount(String(currentPrice + 10));
+    setBids(initialBids);
+  }, [currentPrice, initialBids, auctionId]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setOk(null);
+    const trimmed = bidder.trim();
+    if (trimmed.length < 2) {
+      setError("Zadejte jméno nebo e-mail (alespoň 2 znaky).");
+      return;
+    }
     const amountNum = Number(amount);
     if (!Number.isInteger(amountNum) || amountNum <= 0) {
       setError("Částka musí být celé kladné číslo v Kč.");
+      return;
+    }
+    if (amountNum <= price) {
+      setError(
+        `Příhoz musí být vyšší než aktuální cena (${money(price)}).`,
+      );
+      return;
+    }
+    if (!canBid) {
+      setError("Do této aukce už nelze přihazovat.");
       return;
     }
     setPending(true);
@@ -62,21 +83,25 @@ export function BidPanel({
       const res = await fetch(`/api/auctions/${auctionId}/bids`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ bidder: bidder.trim(), amount: amountNum }),
+        body: JSON.stringify({ bidder: trimmed, amount: amountNum }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(typeof data.error === "string" ? data.error : "Příhoz selhal.");
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : "Příhoz se nepodařilo uložit.",
+        );
         return;
       }
       try {
-        localStorage.setItem(STORAGE_KEY, bidder.trim());
+        localStorage.setItem(STORAGE_KEY, trimmed);
       } catch {
         /* ignore */
       }
       setPrice(data.auction.currentPrice);
       setAmount(String(data.auction.currentPrice + 10));
-      setBids((prev) => [data.bid, ...prev]);
+      setBids((prev) => [data.bid, ...prev.filter((b) => b.id !== data.bid.id)]);
       setOk(`Příhoz ${money(amountNum)} uložen.`);
       router.refresh();
     } catch {
