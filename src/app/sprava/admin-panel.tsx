@@ -1,0 +1,109 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+type Row = {
+  id: string;
+  title: string;
+  status: string;
+  currentPrice: number;
+  endsAt: string;
+  bidCount: number;
+};
+
+const money = (n: number) =>
+  new Intl.NumberFormat("cs-CZ", {
+    style: "currency",
+    currency: "CZK",
+    maximumFractionDigits: 0,
+  }).format(n);
+
+export function AdminPanel({ auctions }: { auctions: Row[] }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.refresh();
+  }
+
+  async function removeAuction(row: Row) {
+    const ok = window.confirm(
+      `Opravdu smazat aukci „${row.title}“ včetně všech příhozů? Tuto akci nelze vrátit.`,
+    );
+    if (!ok) return;
+    setError(null);
+    setPendingId(row.id);
+    try {
+      const res = await fetch(`/api/admin/auctions/${row.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(
+          typeof data.error === "string" ? data.error : "Smazání selhalo.",
+        );
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Síťová chyba při mazání.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-toolbar">
+        <p className="bid-hint">
+          Přihlášeni jako administrátor (cookie, 12 h). Veřejný katalog nemá
+          tlačítko smazat.
+        </p>
+        <button type="button" className="btn secondary" onClick={logout}>
+          Odhlásit
+        </button>
+      </div>
+
+      {error && <p className="bid-error">{error}</p>}
+
+      {auctions.length === 0 ? (
+        <p>Žádné aukce v databázi.</p>
+      ) : (
+        <ul className="admin-list">
+          {auctions.map((a) => (
+            <li key={a.id}>
+              <div className="admin-list-main">
+                <strong>{a.title}</strong>
+                <span>
+                  {a.status} · {money(a.currentPrice)} · {a.bidCount} příhozů ·
+                  končí{" "}
+                  {new Date(a.endsAt).toLocaleString("cs-CZ", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </span>
+              </div>
+              <div className="admin-list-actions">
+                <Link className="btn secondary" href={`/aukce/${a.id}`}>
+                  Zobrazit
+                </Link>
+                <button
+                  type="button"
+                  className="btn danger"
+                  disabled={pendingId === a.id}
+                  onClick={() => removeAuction(a)}
+                >
+                  {pendingId === a.id ? "Mažu…" : "Smazat"}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
