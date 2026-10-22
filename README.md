@@ -39,7 +39,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DATABASE_URL` | yes | Pooled Postgres URL (Neon pooled / local) |
 | `DIRECT_URL` | yes | Direct Postgres URL for migrations (Neon direct; locally = `DATABASE_URL`) |
 | `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Default **ON** until SSO (`src/lib/flags.ts`). Set `false` to lock create early. |
-| `BLOB_READ_WRITE_TOKEN` | no | Injected by Vercel Blob store; enables photo upload on `/aukce/nova`. |
+| (photos) | — | Stored in Neon (`AuctionImage` bytea), served at `/api/images/[id]`. No Blob token. |
 
 ### Neon + Vercel
 

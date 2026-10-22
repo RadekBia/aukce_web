@@ -13,13 +13,24 @@ const money = (n: number) =>
   }).format(n);
 
 export default async function Home() {
-  let auctions = [] as Awaited<ReturnType<typeof prisma.auction.findMany>>;
+  let auctions: Awaited<
+    ReturnType<
+      typeof prisma.auction.findMany<{
+        include: {
+          images: { select: { id: true }; orderBy: { sortOrder: "asc" } };
+        };
+      }>
+    >
+  > = [];
   let db = true;
   try {
     auctions = await prisma.auction.findMany({
       where: { status: "ACTIVE", endsAt: { gt: new Date() } },
       orderBy: { endsAt: "asc" },
       take: 40,
+      include: {
+        images: { select: { id: true }, orderBy: { sortOrder: "asc" } },
+      },
     });
   } catch {
     db = false;
@@ -68,10 +79,9 @@ export default async function Home() {
         <div className="grid">
           {auctions.map((a) => {
             const cover = coverImageUrl(a);
-            const extra =
-              (a.imageUrls?.length ?? 0) > 1
-                ? a.imageUrls!.length - 1
-                : 0;
+            const total =
+              (a.images?.length ?? 0) || (a.imageUrls?.length ?? 0) || (a.imageUrl ? 1 : 0);
+            const extra = total > 1 ? total - 1 : 0;
             return (
               <article className="card" key={a.id}>
                 {cover && (
