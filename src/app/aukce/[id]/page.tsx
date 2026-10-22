@@ -29,7 +29,12 @@ export default async function AuctionDetail({
   let auction;
   let bids: Awaited<ReturnType<typeof prisma.bid.findMany>> = [];
   try {
-    auction = await prisma.auction.findUnique({ where: { id } });
+    auction = await prisma.auction.findUnique({
+      where: { id },
+      include: {
+        images: { select: { id: true }, orderBy: { sortOrder: "asc" } },
+      },
+    });
     if (auction) {
       bids = await prisma.bid.findMany({
         where: { auctionId: id },

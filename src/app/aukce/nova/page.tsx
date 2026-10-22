@@ -1,15 +1,11 @@
 import Link from "next/link";
-import {
-  isBlobUploadConfigured,
-  isUnauthenticatedAuctionCreationEnabled,
-} from "@/lib/flags";
+import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
 import { CreateAuctionForm } from "./create-form";
 
 export const dynamic = "force-dynamic";
 
 export default function NewAuction() {
   const creationEnabled = isUnauthenticatedAuctionCreationEnabled();
-  const blobConfigured = isBlobUploadConfigured();
 
   return (
     <main>
@@ -25,7 +21,7 @@ export default function NewAuction() {
         <p className="eyebrow">PRO PRODÁVAJÍCÍ</p>
         <h1>Vložit novou aukci</h1>
         {creationEnabled ? (
-          <CreateAuctionForm blobConfigured={blobConfigured} />
+          <CreateAuctionForm />
         ) : (
           <>
             <p>

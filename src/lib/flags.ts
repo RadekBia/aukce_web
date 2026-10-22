@@ -30,8 +30,3 @@ export function isUnauthenticatedAuctionCreationEnabled(): boolean {
   if (explicit !== undefined) return explicit;
   return UNAUTHENTICATED_CREATE_UNTIL_SSO;
 }
-
-/** True when Vercel Blob can accept uploads (token present at runtime). */
-export function isBlobUploadConfigured(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
-}

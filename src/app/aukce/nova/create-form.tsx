@@ -15,11 +15,7 @@ const CATEGORIES = [
 const CONDITIONS = ["Nový", "Velmi dobrý", "Dobrý", "Použitý", "Na opravu"];
 const MAX_FILES = 5;
 
-export function CreateAuctionForm({
-  blobConfigured,
-}: {
-  blobConfigured: boolean;
-}) {
+export function CreateAuctionForm() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +28,9 @@ export function CreateAuctionForm({
     const form = e.currentTarget;
     const fd = new FormData(form);
     const imageRaw = String(fd.get("imageUrl") ?? "").trim();
-    const fileList = fd.getAll("imageFiles").filter(
-      (f): f is File => f instanceof File && f.size > 0,
-    );
+    const fileList = fd
+      .getAll("imageFiles")
+      .filter((f): f is File => f instanceof File && f.size > 0);
     const startingPrice = Number(fd.get("startingPrice"));
     const durationHours = Number(fd.get("durationHours"));
 
@@ -45,11 +41,14 @@ export function CreateAuctionForm({
 
     setPending(true);
     try {
-      let imageUrls: string[] = [];
+      const imageIds: string[] = [];
 
-      if (fileList.length > 0) {
+      // One request per file (~2 MB) — stays under serverless body limits.
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i]!;
         const uploadFd = new FormData();
-        for (const file of fileList) uploadFd.append("files", file);
+        uploadFd.set("file", file);
+        uploadFd.set("sortOrder", String(i));
         const up = await fetch("/api/uploads", {
           method: "POST",
           body: uploadFd,
@@ -63,15 +62,7 @@ export function CreateAuctionForm({
           );
           return;
         }
-        if (Array.isArray(upData.urls)) {
-          imageUrls = upData.urls.filter(
-            (u: unknown): u is string => typeof u === "string",
-          );
-        } else if (typeof upData.url === "string") {
-          imageUrls = [upData.url];
-        }
-      } else if (imageRaw) {
-        imageUrls = [imageRaw];
+        if (typeof upData.id === "string") imageIds.push(upData.id);
       }
 
       const body = {
@@ -79,8 +70,9 @@ export function CreateAuctionForm({
         description: String(fd.get("description") ?? "").trim(),
         category: String(fd.get("category") ?? "").trim(),
         condition: String(fd.get("condition") ?? "").trim(),
-        imageUrls,
-        imageUrl: imageUrls[0] ?? "",
+        imageIds,
+        imageUrl: imageIds.length === 0 ? imageRaw : "",
+        imageUrls: imageIds.length === 0 && imageRaw ? [imageRaw] : [],
         startingPrice,
         durationHours,
       };
@@ -112,6 +104,7 @@ export function CreateAuctionForm({
     <form className="create-form" onSubmit={onSubmit}>
       <p className="notice bid-warn">
         Vytváření aukcí je dočasně otevřené bez přihlášení (do Google SSO).
+        Fotky se ukládají do Neon databáze (ne Vercel Blob).
       </p>
 
       <label>
@@ -154,8 +147,9 @@ export function CreateAuctionForm({
       <fieldset className="create-attachments">
         <legend>Přílohy — fotky z počítače</legend>
         <p className="bid-hint">
-          Hlavní způsob: vyberte 1–{MAX_FILES} souborů (JPEG, PNG nebo WebP, max.
-          4,5&nbsp;MB každý). Nahrají se do Vercel Blob.
+          Hlavní způsob: 1–{MAX_FILES} souborů (JPEG, PNG nebo WebP, max.
+          2&nbsp;MB každý). Uloží se do Neon Postgres a zobrazí přes{" "}
+          <code>/api/images/…</code>.
         </p>
         <label className="file-picker">
           <span className="btn secondary file-picker-btn">
@@ -182,14 +176,6 @@ export function CreateAuctionForm({
         ) : (
           <p className="bid-hint">Zatím žádné soubory.</p>
         )}
-        {!blobConfigured && (
-          <p className="notice bid-warn">
-            Blob ještě není připojený na Vercelu — nahrání souborů zatím
-            neprojde. Postup: <strong>Storage → Blob → Create Database /
-            Connect to Project</strong> (token se doplní sám). Do té doby
-            použijte záložní URL níže.
-          </p>
-        )}
       </fieldset>
 
       <button
@@ -203,7 +189,7 @@ export function CreateAuctionForm({
       </button>
       {showUrlFallback && (
         <label>
-          URL obrázku (volitelné, když nejde nahrát soubor)
+          URL obrázku (volitelné — neukládá se jako soubor v DB)
           <input
             name="imageUrl"
             type="url"
