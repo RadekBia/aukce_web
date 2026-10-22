@@ -32,9 +32,11 @@ const money = (n: number) =>
 export function AdminPanel({
   auctions,
   bids,
+  saved,
 }: {
   auctions: Row[];
   bids: BidLogRow[];
+  saved?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +85,9 @@ export function AdminPanel({
         </button>
       </div>
 
+      {saved && (
+        <p className="bid-ok">Aukce byla úspěšně uložena.</p>
+      )}
       {error && <p className="bid-error">{error}</p>}
 
       <h2 className="admin-section-title">Aukce</h2>
@@ -106,6 +111,9 @@ export function AdminPanel({
               <div className="admin-list-actions">
                 <Link className="btn secondary" href={`/aukce/${a.id}`}>
                   Zobrazit
+                </Link>
+                <Link className="btn secondary" href={`/sprava/${a.id}`}>
+                  Upravit
                 </Link>
                 <button
                   type="button"

@@ -7,7 +7,13 @@ import { AdminLoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function SpravaPage() {
+export default async function SpravaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ulozeno?: string }>;
+}) {
+  const { ulozeno } = await searchParams;
+  const saved = ulozeno === "1";
   const configured = isAdminConfigured();
   const loggedIn = configured && (await isAdminSession());
 
@@ -80,7 +86,7 @@ export default async function SpravaPage() {
           </p>
         )}
         {loggedIn ? (
-          <AdminPanel auctions={auctions} bids={bids} />
+          <AdminPanel auctions={auctions} bids={bids} saved={saved} />
         ) : (
           <AdminLoginForm configured={configured} />
         )}
