@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
 import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
 import { CreateAuctionForm } from "./create-form";
 
@@ -9,14 +10,13 @@ export default function NewAuction() {
 
   return (
     <main>
-      <header>
-        <Link className="brand" href="/">
-          Aukceee <span>na dobrou Věc</span>
-        </Link>
-        <Link href="/" className="btn secondary">
-          ← Zpět
-        </Link>
-      </header>
+      <SiteHeader
+        actions={
+          <Link href="/" className="btn secondary">
+            ← Zpět
+          </Link>
+        }
+      />
       <section className="form">
         <p className="eyebrow">PRO PRODÁVAJÍCÍ</p>
         <h1>Vložit novou aukci</h1>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
 import { coverImageUrl } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
 
@@ -64,18 +65,19 @@ export default async function Home({
 
   return (
     <main>
-      <header>
-        <Link className="brand" href="/">
-          Aukceee <span>na dobrou Věc</span>
-        </Link>
-        <nav>
-          <a href="#aukce">Aukce</a>
-          <a href="#jak">Jak to funguje</a>
-        </nav>
-        <Link className="btn" href="/aukce/nova">
-          ＋ Vložit aukci
-        </Link>
-      </header>
+      <SiteHeader
+        nav={
+          <>
+            <a href="#aukce">Aukce</a>
+            <a href="#jak">Jak to funguje</a>
+          </>
+        }
+        actions={
+          <Link className="btn" href="/aukce/nova">
+            ＋ Vložit aukci
+          </Link>
+        }
+      />
       <section className="hero">
         <p>DEJTE VĚCEM DRUHOU ŠANCI</p>
         <h1>
