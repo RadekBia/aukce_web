@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { coverImageUrl } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
 
 // Always query Neon at request time — avoid build-time prerender with an empty DB.
@@ -65,22 +66,36 @@ export default async function Home() {
           <p>Zatím tu nejsou aktivní aukce. Spusťte seed podle README.</p>
         )}
         <div className="grid">
-          {auctions.map((a) => (
-            <article className="card" key={a.id}>
-              {a.imageUrl && <img src={a.imageUrl} alt={a.title} />}
-              <div className="body">
-                <small>
-                  {a.category} · {a.condition}
-                </small>
-                <h3>{a.title}</h3>
-                <strong>{money(a.currentPrice)}</strong>
-                <p>Končí {a.endsAt.toLocaleDateString("cs-CZ")}</p>
-                <Link className="btn secondary" href={`/aukce/${a.id}`}>
-                  Zobrazit aukci →
-                </Link>
-              </div>
-            </article>
-          ))}
+          {auctions.map((a) => {
+            const cover = coverImageUrl(a);
+            const extra =
+              (a.imageUrls?.length ?? 0) > 1
+                ? a.imageUrls!.length - 1
+                : 0;
+            return (
+              <article className="card" key={a.id}>
+                {cover && (
+                  <div className="card-media">
+                    <img src={cover} alt={a.title} />
+                    {extra > 0 && (
+                      <span className="card-media-badge">+{extra} fotek</span>
+                    )}
+                  </div>
+                )}
+                <div className="body">
+                  <small>
+                    {a.category} · {a.condition}
+                  </small>
+                  <h3>{a.title}</h3>
+                  <strong>{money(a.currentPrice)}</strong>
+                  <p>Končí {a.endsAt.toLocaleDateString("cs-CZ")}</p>
+                  <Link className="btn secondary" href={`/aukce/${a.id}`}>
+                    Zobrazit aukci →
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
       <section id="jak" className="how">

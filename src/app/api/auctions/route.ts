@@ -12,6 +12,7 @@ const schema = z.object({
   category: z.string().min(2).max(60),
   condition: z.string().min(2).max(40),
   imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrls: z.array(z.string().url()).max(5).optional(),
   startingPrice: z.number().int().positive(),
   durationHours: z.number().int().min(1).max(720),
 });
@@ -42,13 +43,22 @@ export async function POST(req: Request) {
   }
 
   const d = parsed.data;
+  const urls = Array.from(
+    new Set(
+      [...(d.imageUrls ?? []), d.imageUrl || ""].filter(
+        (u): u is string => Boolean(u),
+      ),
+    ),
+  ).slice(0, 5);
+
   const auction = await prisma.auction.create({
     data: {
       title: d.title,
       description: d.description,
       category: d.category,
       condition: d.condition,
-      imageUrl: d.imageUrl || null,
+      imageUrl: urls[0] ?? null,
+      imageUrls: urls,
       startingPrice: d.startingPrice,
       currentPrice: d.startingPrice,
       endsAt: new Date(Date.now() + d.durationHours * 3600000),
