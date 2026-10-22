@@ -3,16 +3,14 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { auctionImageList } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
-import { BidPanel } from "./bid-panel";
+import {
+  BidFields,
+  BidList,
+  BidPriceRow,
+  BidProvider,
+} from "./bid-panel";
 
 export const dynamic = "force-dynamic";
-
-const money = (n: number) =>
-  new Intl.NumberFormat("cs-CZ", {
-    style: "currency",
-    currency: "CZK",
-    maximumFractionDigits: 0,
-  }).format(n);
 
 const statusLabel: Record<string, string> = {
   DRAFT: "Koncept",
@@ -55,6 +53,12 @@ export default async function AuctionDetail({
     timeStyle: "short",
   });
   const images = auctionImageList(auction);
+  const initialBids = bids.map((b) => ({
+    id: b.id,
+    bidderId: b.bidderId,
+    amount: b.amount,
+    createdAt: b.createdAt.toISOString(),
+  }));
 
   return (
     <main>
@@ -67,68 +71,59 @@ export default async function AuctionDetail({
         }
       />
 
-      <section className="detail">
-        {images.length > 0 && (
-          <div className="detail-gallery">
-            {images.map((src, i) => (
-              <img
-                key={src}
-                className={i === 0 ? "detail-image" : "detail-image thumb"}
-                src={src}
-                alt={`${auction.title} — fotka ${i + 1}`}
-              />
-            ))}
+      <BidProvider
+        auctionId={auction.id}
+        currentPrice={auction.currentPrice}
+        startingPrice={auction.startingPrice}
+        canBid={canBid}
+        initialBids={initialBids}
+      >
+        <section className="detail">
+          <div className="detail-left">
+            {images.length > 0 && (
+              <div className="detail-gallery">
+                {images.map((src, i) => (
+                  <img
+                    key={src}
+                    className={i === 0 ? "detail-image" : "detail-image thumb"}
+                    src={src}
+                    alt={`${auction.title} — fotka ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+            <BidList />
           </div>
-        )}
-        <div className="detail-body">
-          <p className="eyebrow">DETAIL AUKCE</p>
-          <h1>{auction.title}</h1>
-          <p className="cat-badge detail-cat">
-            <span className="cat-badge-label">Kategorie</span>
-            <span className="cat-badge-value">{auction.category}</span>
-          </p>
-          <p className="detail-meta">
-            Stav: {auction.condition}
-          </p>
-          <p className="detail-meta">
-            {statusLabel[auction.status] ?? auction.status}
-            {ended && auction.status === "ACTIVE" ? " (čas vypršel)" : ""}
-          </p>
-          <div className="detail-prices">
-            <div>
-              <small>Aktuální cena</small>
-              <strong>{money(auction.currentPrice)}</strong>
-            </div>
-            <div>
-              <small>Vyvolávací cena</small>
-              <strong className="muted-price">
-                {money(auction.startingPrice)}
-              </strong>
-            </div>
+
+          <div className="detail-body">
+            <p className="eyebrow">DETAIL AUKCE</p>
+            <h1>{auction.title}</h1>
+            <p className="cat-badge detail-cat">
+              <span className="cat-badge-label">Kategorie</span>
+              <span className="cat-badge-value">{auction.category}</span>
+            </p>
+            <p className="detail-meta">Stav: {auction.condition}</p>
+            <p className="detail-meta">
+              {statusLabel[auction.status] ?? auction.status}
+              {ended && auction.status === "ACTIVE" ? " (čas vypršel)" : ""}
+            </p>
+
+            <BidPriceRow />
+
+            <p className="detail-ends">
+              {ended ? "Skončila" : "Končí"} {endsLabel}
+            </p>
+            <h2>Popis</h2>
+            <p className="detail-desc">{auction.description}</p>
+
+            <BidFields />
+
+            <Link className="btn secondary" href="/#aukce">
+              Další aukce
+            </Link>
           </div>
-          <p className="detail-ends">
-            {ended ? "Skončila" : "Končí"} {endsLabel}
-          </p>
-          <h2>Popis</h2>
-          <p className="detail-desc">{auction.description}</p>
-
-          <BidPanel
-            auctionId={auction.id}
-            currentPrice={auction.currentPrice}
-            canBid={canBid}
-            initialBids={bids.map((b) => ({
-              id: b.id,
-              bidderId: b.bidderId,
-              amount: b.amount,
-              createdAt: b.createdAt.toISOString(),
-            }))}
-          />
-
-          <Link className="btn secondary" href="/#aukce">
-            Další aukce
-          </Link>
-        </div>
-      </section>
+        </section>
+      </BidProvider>
     </main>
   );
 }
