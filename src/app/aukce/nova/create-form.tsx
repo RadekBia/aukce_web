@@ -147,9 +147,10 @@ export function CreateAuctionForm() {
       <fieldset className="create-attachments">
         <legend>Přílohy — fotky z počítače</legend>
         <p className="bid-hint">
-          Hlavní způsob: 1–{MAX_FILES} souborů (JPEG, PNG nebo WebP, max.
-          2&nbsp;MB každý). Uloží se do Neon Postgres a zobrazí přes{" "}
-          <code>/api/images/…</code>.
+          1–{MAX_FILES} souborů (JPEG, PNG nebo WebP). Fotky se{" "}
+          <strong>automaticky zmenší a zkomprimují</strong> na serveru (nejdelší
+          strana max. 1600&nbsp;px, WebP kvalita 80) a uloží do Neon. Po
+          kompresi max. 2&nbsp;MB na fotku.
         </p>
         <label className="file-picker">
           <span className="btn secondary file-picker-btn">
