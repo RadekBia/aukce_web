@@ -12,21 +12,13 @@ function parseTriState(raw: string | undefined): boolean | undefined {
 }
 
 /**
- * TEMPORARY until Google SSO / real auth: unauthenticated create is ON by default
- * (local + production) so the live site can accept new auctions.
- *
- * Lock early without waiting for SSO:
- *   ENABLE_UNAUTHENTICATED_AUCTION_CREATION=false
- *
- * When SSO lands: flip `UNAUTHENTICATED_CREATE_UNTIL_SSO` to false (or delete this
- * path and require a session).
+ * Unauthenticated create is OFF — Google sign-in is required.
+ * Emergency reopen (not recommended): ENABLE_UNAUTHENTICATED_AUCTION_CREATION=true
  */
-const UNAUTHENTICATED_CREATE_UNTIL_SSO = true;
-
 export function isUnauthenticatedAuctionCreationEnabled(): boolean {
   const explicit = parseTriState(
     process.env.ENABLE_UNAUTHENTICATED_AUCTION_CREATION,
   );
   if (explicit !== undefined) return explicit;
-  return UNAUTHENTICATED_CREATE_UNTIL_SSO;
+  return false;
 }

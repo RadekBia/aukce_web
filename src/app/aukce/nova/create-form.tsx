@@ -115,9 +115,9 @@ export function CreateAuctionForm() {
 
   return (
     <form className="create-form" onSubmit={onSubmit}>
-      <p className="notice bid-warn">
-        Vytváření aukcí je dočasně otevřené bez přihlášení (do Google SSO).
-        Fotky se ukládají do Neon databáze (ne Vercel Blob).
+      <p className="notice">
+        Vytváření aukcí vyžaduje přihlášení přes Google. Fotky se ukládají do
+        Neon databáze (ne Vercel Blob).
       </p>
 
       <label>

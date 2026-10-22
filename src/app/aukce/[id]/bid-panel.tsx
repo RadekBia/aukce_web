@@ -24,18 +24,17 @@ const money = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-const STORAGE_KEY = "aukce_local_bidder";
 const FORM_ID = "aukce-bid-form";
 
 type BidCtx = {
   auctionId: string;
   canBid: boolean;
+  signedIn: boolean;
+  accountLabel: string | null;
   price: number;
   startingPrice: number;
   amount: string;
   setAmount: (v: string) => void;
-  bidder: string;
-  setBidder: (v: string) => void;
   bids: BidRow[];
   error: string | null;
   ok: string | null;
@@ -56,6 +55,8 @@ export function BidProvider({
   currentPrice,
   startingPrice,
   canBid,
+  signedIn,
+  accountLabel,
   initialBids,
   children,
 }: {
@@ -63,26 +64,18 @@ export function BidProvider({
   currentPrice: number;
   startingPrice: number;
   canBid: boolean;
+  signedIn: boolean;
+  accountLabel: string | null;
   initialBids: BidRow[];
   children: ReactNode;
 }) {
   const router = useRouter();
-  const [bidder, setBidder] = useState("");
   const [amount, setAmount] = useState(String(currentPrice + 10));
   const [price, setPrice] = useState(currentPrice);
   const [bids, setBids] = useState(initialBids);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setBidder(saved);
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   useEffect(() => {
     setPrice(currentPrice);
@@ -94,9 +87,8 @@ export function BidProvider({
     e.preventDefault();
     setError(null);
     setOk(null);
-    const trimmed = bidder.trim();
-    if (trimmed.length < 2) {
-      setError("Zadejte jméno nebo e-mail (alespoň 2 znaky).");
+    if (!signedIn) {
+      setError("Pro přihazování se přihlaste přes Google.");
       return;
     }
     const amountNum = Number(amount);
@@ -119,7 +111,7 @@ export function BidProvider({
       const res = await fetch(`/api/auctions/${auctionId}/bids`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ bidder: trimmed, amount: amountNum }),
+        body: JSON.stringify({ amount: amountNum }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -129,11 +121,6 @@ export function BidProvider({
             : "Příhoz se nepodařilo uložit.",
         );
         return;
-      }
-      try {
-        localStorage.setItem(STORAGE_KEY, trimmed);
-      } catch {
-        /* ignore */
       }
       setPrice(data.auction.currentPrice);
       setAmount(String(data.auction.currentPrice + 10));
@@ -152,12 +139,12 @@ export function BidProvider({
       value={{
         auctionId,
         canBid,
+        signedIn,
+        accountLabel,
         price,
         startingPrice,
         amount,
         setAmount,
-        bidder,
-        setBidder,
         bids,
         error,
         ok,
@@ -172,7 +159,8 @@ export function BidProvider({
 
 /** Current + starting price; Přihodit sits on the same row as current price. */
 export function BidPriceRow() {
-  const { canBid, price, startingPrice, pending } = useBidCtx();
+  const { canBid, signedIn, price, startingPrice, pending } = useBidCtx();
+  const showBidButton = canBid && signedIn;
 
   return (
     <div className="detail-prices detail-prices-with-bid">
@@ -180,7 +168,7 @@ export function BidPriceRow() {
         <small>Aktuální cena</small>
         <div className="detail-price-current-row">
           <strong className="price-lg">{money(price)}</strong>
-          {canBid && (
+          {showBidButton && (
             <button
               className="btn"
               type="submit"
@@ -200,15 +188,15 @@ export function BidPriceRow() {
   );
 }
 
-/** Name + amount fields (and messages) on the right; submit via price-row button. */
+/** Amount field (and messages) on the right; identity from Google session. */
 export function BidFields() {
   const {
     canBid,
+    signedIn,
+    accountLabel,
     price,
     amount,
     setAmount,
-    bidder,
-    setBidder,
     error,
     ok,
     onSubmit,
@@ -218,26 +206,21 @@ export function BidFields() {
     return <p className="notice">Do této aukce už nelze přihazovat.</p>;
   }
 
+  if (!signedIn) {
+    return (
+      <p className="notice bid-warn">
+        Pro přihazování se přihlaste přes Google (tlačítko{" "}
+        <strong>Přihlásit se přes Google</strong> v záhlaví).
+      </p>
+    );
+  }
+
   return (
     <form id={FORM_ID} className="bid-form" onSubmit={onSubmit}>
       <h2>Přihodit</h2>
       <p className="bid-hint">
-        Lokální vývoj: zadejte jméno nebo e-mail — není to přihlášení ani
-        ověřená identita. Hodnota se uloží do <code>Bid.bidderId</code>.
+        Přihazujete jako <strong>{accountLabel ?? "Google účet"}</strong>.
       </p>
-      <label>
-        Jméno / e-mail
-        <input
-          name="bidder"
-          value={bidder}
-          onChange={(e) => setBidder(e.target.value)}
-          placeholder="např. jan@example.cz"
-          required
-          minLength={2}
-          maxLength={80}
-          autoComplete="nickname"
-        />
-      </label>
       <label>
         Částka (Kč)
         <input
