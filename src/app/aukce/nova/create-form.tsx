@@ -2,6 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import {
+  BROWSER_MAX_ORIGINAL_BYTES,
+  compressImageInBrowser,
+} from "@/lib/browser-compress";
 
 const CATEGORIES = [
   "Domácnost",
@@ -43,11 +47,20 @@ export function CreateAuctionForm() {
     try {
       const imageIds: string[] = [];
 
-      // One request per file (~2 MB) — stays under serverless body limits.
       for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i]!;
+        const original = fileList[i]!;
+        let compressed: File;
+        try {
+          compressed = await compressImageInBrowser(original);
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "Komprese fotky selhala.",
+          );
+          return;
+        }
+
         const uploadFd = new FormData();
-        uploadFd.set("file", file);
+        uploadFd.set("file", compressed);
         uploadFd.set("sortOrder", String(i));
         const up = await fetch("/api/uploads", {
           method: "POST",
@@ -121,9 +134,15 @@ export function CreateAuctionForm() {
           rows={5}
         />
       </label>
-      <div className="create-row">
+
+      <fieldset className="create-category">
+        <legend>Kategorie</legend>
+        <p className="bid-hint">
+          Vyberte, kam aukce patří — kategorie se zobrazí na přehledu i v
+          detailu.
+        </p>
         <label>
-          Kategorie
+          Kategorie aukce
           <select name="category" required defaultValue={CATEGORIES[0]}>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -133,7 +152,7 @@ export function CreateAuctionForm() {
           </select>
         </label>
         <label>
-          Stav
+          Stav předmětu
           <select name="condition" required defaultValue={CONDITIONS[2]}>
             {CONDITIONS.map((c) => (
               <option key={c} value={c}>
@@ -142,15 +161,16 @@ export function CreateAuctionForm() {
             ))}
           </select>
         </label>
-      </div>
+      </fieldset>
 
       <fieldset className="create-attachments">
         <legend>Přílohy — fotky z počítače</legend>
         <p className="bid-hint">
-          1–{MAX_FILES} souborů (JPEG, PNG nebo WebP). Fotky se{" "}
-          <strong>automaticky zmenší a zkomprimují</strong> na serveru (nejdelší
-          strana max. 1600&nbsp;px, WebP kvalita 80) a uloží do Neon. Po
-          kompresi max. 2&nbsp;MB na fotku.
+          1–{MAX_FILES} souborů (JPEG, PNG nebo WebP), každý až{" "}
+          <strong>20&nbsp;MB</strong>. Fotka se{" "}
+          <strong>automaticky zkomprimuje v prohlížeči</strong> (nejdelší strana
+          max. 1600&nbsp;px, kvalita cca 80) a teprve pak nahraje do Neon — aby
+          prošla limitem serveru.
         </p>
         <label className="file-picker">
           <span className="btn secondary file-picker-btn">
@@ -165,6 +185,16 @@ export function CreateAuctionForm() {
             onChange={(e) => {
               const list = Array.from(e.target.files ?? []);
               setSelectedNames(list.map((f) => f.name));
+              const tooBig = list.find(
+                (f) => f.size > BROWSER_MAX_ORIGINAL_BYTES,
+              );
+              if (tooBig) {
+                setError(
+                  `Soubor „${tooBig.name}“ je větší než 20 MB. Vyberte menší fotku.`,
+                );
+              } else {
+                setError(null);
+              }
             }}
           />
         </label>
