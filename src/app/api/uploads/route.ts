@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import {
   compressAuctionImage,
   IMAGE_MAX_STORED_BYTES,
-  IMAGE_MAX_UPLOAD_BYTES,
 } from "@/lib/compress-image";
 import { storedImagePath } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
@@ -10,9 +9,11 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Client should already compress; stay under Vercel ~4.5 MB body limit. */
+const MAX_POST_BYTES = 4 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-/** Store one compressed image in Neon (bytea). Call once per file. */
+/** Store one image in Neon (bytea). Prefer browser-precompressed WebP/JPEG. */
 export async function POST(req: Request) {
   let form: FormData;
   try {
@@ -39,10 +40,10 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  if (file.size > IMAGE_MAX_UPLOAD_BYTES) {
+  if (file.size > MAX_POST_BYTES) {
     return NextResponse.json(
       {
-        error: `Soubor „${file.name}“ je příliš velký na nahrání (max. 12 MB před kompresí).`,
+        error: `Fotka „${file.name}“ je po kompresi stále příliš velká na nahrání (limit serveru cca 4,5 MB).`,
       },
       { status: 400 },
     );
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
 
   try {
     const raw = Buffer.from(await file.arrayBuffer());
+    // Second pass with sharp for consistent max-edge / WebP storage.
     const { data, mimeType } = await compressAuctionImage(raw);
 
     if (data.length > IMAGE_MAX_STORED_BYTES) {
