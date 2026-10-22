@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { auth } from "@/auth";
 import { storedImagePath } from "@/lib/auction-images";
 import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
 import { prisma } from "@/lib/prisma";
@@ -34,13 +35,15 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  if (!isUnauthenticatedAuctionCreationEnabled()) {
+  const session = await auth();
+  const allowAnon = isUnauthenticatedAuctionCreationEnabled();
+  if (!session?.user && !allowAnon) {
     return NextResponse.json(
       {
         error:
-          "Vytváření aukcí je vypnuté (ENABLE_UNAUTHENTICATED_AUCTION_CREATION=false nebo po SSO).",
+          "Pro vytvoření aukce se přihlaste přes Google (tlačítko v záhlaví).",
       },
-      { status: 403 },
+      { status: 401 },
     );
   }
 

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import {
   compressAuctionImage,
   IMAGE_MAX_STORED_BYTES,
 } from "@/lib/compress-image";
 import { storedImagePath } from "@/lib/auction-images";
+import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -15,6 +17,18 @@ const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /** Store one image in Neon (bytea). Prefer browser-precompressed WebP/JPEG. */
 export async function POST(req: Request) {
+  const session = await auth();
+  const allowAnon = isUnauthenticatedAuctionCreationEnabled();
+  if (!session?.user && !allowAnon) {
+    return NextResponse.json(
+      {
+        error:
+          "Pro nahrání fotek se přihlaste přes Google (tlačítko v záhlaví).",
+      },
+      { status: 401 },
+    );
+  }
+
   let form: FormData;
   try {
     form = await req.formData();

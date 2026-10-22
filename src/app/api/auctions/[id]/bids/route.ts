@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { auth, bidderIdFromSession } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const bidSchema = z.object({
-  // Local-dev identity only — not production auth. Stored in Bid.bidderId.
-  bidder: z.string().trim().min(2).max(80),
   amount: z.number().int().positive(),
 });
 
@@ -32,6 +31,28 @@ export async function GET(_req: Request, ctx: Ctx) {
 }
 
 export async function POST(req: Request, ctx: Ctx) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json(
+      {
+        error:
+          "Pro přihazování se přihlaste přes Google (tlačítko v záhlaví).",
+      },
+      { status: 401 },
+    );
+  }
+
+  const bidderId = bidderIdFromSession(session);
+  if (!bidderId) {
+    return NextResponse.json(
+      {
+        error:
+          "Účet Google nemá e-mail ani identifikátor — nelze uložit příhoz.",
+      },
+      { status: 400 },
+    );
+  }
+
   const { id } = await ctx.params;
   let body: unknown;
   try {
@@ -43,12 +64,12 @@ export async function POST(req: Request, ctx: Ctx) {
   const parsed = bidSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Zadejte jméno/e-mail (min. 2 znaky) a kladnou celou částku v Kč." },
+      { error: "Zadejte kladnou celou částku v Kč." },
       { status: 400 },
     );
   }
 
-  const { bidder, amount } = parsed.data;
+  const { amount } = parsed.data;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -81,7 +102,7 @@ export async function POST(req: Request, ctx: Ctx) {
       const bid = await tx.bid.create({
         data: {
           auctionId: id,
-          bidderId: bidder,
+          bidderId,
           amount,
         },
       });
