@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "Vytváření aukcí je vypnuté. Pro lokální test nastavte ENABLE_UNAUTHENTICATED_AUCTION_CREATION=true a restartujte server.",
+          "Vytváření aukcí je vypnuté (ENABLE_UNAUTHENTICATED_AUCTION_CREATION=false nebo po SSO).",
       },
       { status: 403 },
     );

@@ -1,10 +1,15 @@
 import Link from "next/link";
-import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
+import {
+  isBlobUploadConfigured,
+  isUnauthenticatedAuctionCreationEnabled,
+} from "@/lib/flags";
 import { CreateAuctionForm } from "./create-form";
 
+export const dynamic = "force-dynamic";
+
 export default function NewAuction() {
-  // Server Component — reads process.env here (not in the client bundle).
   const creationEnabled = isUnauthenticatedAuctionCreationEnabled();
+  const blobConfigured = isBlobUploadConfigured();
 
   return (
     <main>
@@ -20,20 +25,16 @@ export default function NewAuction() {
         <p className="eyebrow">PRO PRODÁVAJÍCÍ</p>
         <h1>Vložit novou aukci</h1>
         {creationEnabled ? (
-          <CreateAuctionForm />
+          <CreateAuctionForm blobConfigured={blobConfigured} />
         ) : (
           <>
             <p>
-              Formulář je vypnutý. Pro lokální testování nastavte v{" "}
-              <code>.env</code> (a restartujte <code>npm run dev</code>):
+              Formulář je vypnutý (
+              <code>ENABLE_UNAUTHENTICATED_AUCTION_CREATION=false</code> nebo
+              po zavedení přihlášení).
             </p>
-            <pre className="env-snippet">
-              ENABLE_UNAUTHENTICATED_AUCTION_CREATION=&quot;true&quot;
-            </pre>
             <p className="notice bid-warn">
-              Použijte větev z draft PR #1 (ne starý <code>main</code>). V
-              produkci / sdíleném prostředí nechte vypnuté — kdokoli by mohl
-              vytvářet aukce bez přihlášení.
+              Po Google SSO bude vytváření jen pro přihlášené uživatele.
             </p>
             <Link className="btn" href="/">
               Zpět na přehled aukcí
