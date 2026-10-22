@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SiteHeader } from "@/components/site-header";
 import { auctionImageList } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
 import { BidPanel } from "./bid-panel";
@@ -57,17 +58,14 @@ export default async function AuctionDetail({
 
   return (
     <main>
-      <header>
-        <Link className="brand" href="/">
-          Aukceee <span>na dobrou Věc</span>
-        </Link>
-        <nav>
-          <Link href="/#aukce">Aukce</Link>
-        </nav>
-        <Link href="/" className="btn secondary">
-          ← Zpět na přehled
-        </Link>
-      </header>
+      <SiteHeader
+        nav={<Link href="/#aukce">Aukce</Link>}
+        actions={
+          <Link href="/" className="btn secondary">
+            ← Zpět na přehled
+          </Link>
+        }
+      />
 
       <section className="detail">
         {images.length > 0 && (

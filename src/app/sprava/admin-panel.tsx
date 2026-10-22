@@ -13,6 +13,15 @@ type Row = {
   bidCount: number;
 };
 
+type BidLogRow = {
+  id: string;
+  amount: number;
+  bidderId: string;
+  createdAt: string;
+  auctionId: string;
+  auctionTitle: string;
+};
+
 const money = (n: number) =>
   new Intl.NumberFormat("cs-CZ", {
     style: "currency",
@@ -20,7 +29,13 @@ const money = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-export function AdminPanel({ auctions }: { auctions: Row[] }) {
+export function AdminPanel({
+  auctions,
+  bids,
+}: {
+  auctions: Row[];
+  bids: BidLogRow[];
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -60,8 +75,8 @@ export function AdminPanel({ auctions }: { auctions: Row[] }) {
     <div className="admin-panel">
       <div className="admin-toolbar">
         <p className="bid-hint">
-          Přihlášeni jako administrátor (cookie, 12 h). Veřejný katalog nemá
-          tlačítko smazat.
+          Přihlášeni jako administrátor (cookie, 12 h). Mazání jen zde — veřejný
+          katalog tlačítko Smazat nemá.
         </p>
         <button type="button" className="btn secondary" onClick={logout}>
           Odhlásit
@@ -70,6 +85,7 @@ export function AdminPanel({ auctions }: { auctions: Row[] }) {
 
       {error && <p className="bid-error">{error}</p>}
 
+      <h2 className="admin-section-title">Aukce</h2>
       {auctions.length === 0 ? (
         <p>Žádné aukce v databázi.</p>
       ) : (
@@ -100,6 +116,31 @@ export function AdminPanel({ auctions }: { auctions: Row[] }) {
                   {pendingId === a.id ? "Mažu…" : "Smazat"}
                 </button>
               </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="admin-section-title">Protokol příhozů</h2>
+      <p className="bid-hint">
+        Nejnovější příhozy napříč všemi aukcemi (čas, aukce, přihazující,
+        částka).
+      </p>
+      {bids.length === 0 ? (
+        <p>Zatím žádné příhozy.</p>
+      ) : (
+        <ul className="admin-bid-log">
+          {bids.map((b) => (
+            <li key={b.id}>
+              <time dateTime={b.createdAt}>
+                {new Date(b.createdAt).toLocaleString("cs-CZ", {
+                  dateStyle: "short",
+                  timeStyle: "medium",
+                })}
+              </time>
+              <Link href={`/aukce/${b.auctionId}`}>{b.auctionTitle}</Link>
+              <span className="admin-bid-bidder">{b.bidderId}</span>
+              <strong>{money(b.amount)}</strong>
             </li>
           ))}
         </ul>
