@@ -86,10 +86,13 @@ export default async function AuctionDetail({
           <p className="eyebrow">DETAIL AUKCE</p>
           <h1>{auction.title}</h1>
           <p className="cat-badge detail-cat">
-            <span>Kategorie</span> {auction.category}
+            <span className="cat-badge-label">Kategorie</span>
+            <span className="cat-badge-value">{auction.category}</span>
           </p>
           <p className="detail-meta">
-            Stav: {auction.condition} ·{" "}
+            Stav: {auction.condition}
+          </p>
+          <p className="detail-meta">
             {statusLabel[auction.status] ?? auction.status}
             {ended && auction.status === "ACTIVE" ? " (čas vypršel)" : ""}
           </p>

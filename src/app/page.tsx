@@ -150,9 +150,10 @@ export default async function Home({
                 )}
                 <div className="body">
                   <p className="cat-badge">
-                    <span>Kategorie</span> {a.category}
+                    <span className="cat-badge-label">Kategorie</span>
+                    <span className="cat-badge-value">{a.category}</span>
                   </p>
-                  <small>Stav: {a.condition}</small>
+                  <p className="card-condition">Stav: {a.condition}</p>
                   <h3>{a.title}</h3>
                   <strong>{money(a.currentPrice)}</strong>
                   <p>Končí {a.endsAt.toLocaleDateString("cs-CZ")}</p>
