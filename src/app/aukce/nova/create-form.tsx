@@ -13,6 +13,7 @@ const CATEGORIES = [
 ];
 
 const CONDITIONS = ["Nový", "Velmi dobrý", "Dobrý", "Použitý", "Na opravu"];
+const MAX_FILES = 5;
 
 export function CreateAuctionForm({
   blobConfigured,
@@ -22,7 +23,8 @@ export function CreateAuctionForm({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [selectedNames, setSelectedNames] = useState<string[]>([]);
+  const [showUrlFallback, setShowUrlFallback] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,17 +32,24 @@ export function CreateAuctionForm({
     const form = e.currentTarget;
     const fd = new FormData(form);
     const imageRaw = String(fd.get("imageUrl") ?? "").trim();
-    const file = fd.get("imageFile");
+    const fileList = fd.getAll("imageFiles").filter(
+      (f): f is File => f instanceof File && f.size > 0,
+    );
     const startingPrice = Number(fd.get("startingPrice"));
     const durationHours = Number(fd.get("durationHours"));
 
+    if (fileList.length > MAX_FILES) {
+      setError(`Najednou lze nahrát nejvýše ${MAX_FILES} příloh.`);
+      return;
+    }
+
     setPending(true);
     try {
-      let imageUrl = imageRaw;
+      let imageUrls: string[] = [];
 
-      if (file instanceof File && file.size > 0) {
+      if (fileList.length > 0) {
         const uploadFd = new FormData();
-        uploadFd.set("file", file);
+        for (const file of fileList) uploadFd.append("files", file);
         const up = await fetch("/api/uploads", {
           method: "POST",
           body: uploadFd,
@@ -50,11 +59,19 @@ export function CreateAuctionForm({
           setError(
             typeof upData.error === "string"
               ? upData.error
-              : "Nahrání fotky selhalo.",
+              : "Nahrání příloh selhalo.",
           );
           return;
         }
-        if (typeof upData.url === "string") imageUrl = upData.url;
+        if (Array.isArray(upData.urls)) {
+          imageUrls = upData.urls.filter(
+            (u: unknown): u is string => typeof u === "string",
+          );
+        } else if (typeof upData.url === "string") {
+          imageUrls = [upData.url];
+        }
+      } else if (imageRaw) {
+        imageUrls = [imageRaw];
       }
 
       const body = {
@@ -62,7 +79,8 @@ export function CreateAuctionForm({
         description: String(fd.get("description") ?? "").trim(),
         category: String(fd.get("category") ?? "").trim(),
         condition: String(fd.get("condition") ?? "").trim(),
-        imageUrl,
+        imageUrls,
+        imageUrl: imageUrls[0] ?? "",
         startingPrice,
         durationHours,
       };
@@ -94,8 +112,6 @@ export function CreateAuctionForm({
     <form className="create-form" onSubmit={onSubmit}>
       <p className="notice bid-warn">
         Vytváření aukcí je dočasně otevřené bez přihlášení (do Google SSO).
-        Kdokoli s odkazem může přidat položku — po SSO se formulář znovu
-        zamkne.
       </p>
 
       <label>
@@ -135,42 +151,67 @@ export function CreateAuctionForm({
         </label>
       </div>
 
-      <label>
-        Fotka (soubor)
-        <input
-          name="imageFile"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          disabled={!blobConfigured || pending}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            setFileName(f ? f.name : null);
-          }}
-        />
-      </label>
-      {blobConfigured ? (
+      <fieldset className="create-attachments">
+        <legend>Přílohy — fotky z počítače</legend>
         <p className="bid-hint">
-          {fileName
-            ? `Vybráno: ${fileName}`
-            : "Soubor se nahraje do Vercel Blob a uloží jako veřejná URL."}
+          Hlavní způsob: vyberte 1–{MAX_FILES} souborů (JPEG, PNG nebo WebP, max.
+          4,5&nbsp;MB každý). Nahrají se do Vercel Blob.
         </p>
-      ) : (
-        <p className="notice bid-warn">
-          Nahrávání souborů zatím není připojené. Ve Vercelu:{" "}
-          <strong>Storage → Blob</strong> → připojit k tomuto projektu (token
-          se doplní automaticky). Do té doby použijte URL níže.
-        </p>
-      )}
+        <label className="file-picker">
+          <span className="btn secondary file-picker-btn">
+            Vybrat fotky z počítače…
+          </span>
+          <input
+            name="imageFiles"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            disabled={pending}
+            onChange={(e) => {
+              const list = Array.from(e.target.files ?? []);
+              setSelectedNames(list.map((f) => f.name));
+            }}
+          />
+        </label>
+        {selectedNames.length > 0 ? (
+          <ul className="file-name-list">
+            {selectedNames.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="bid-hint">Zatím žádné soubory.</p>
+        )}
+        {!blobConfigured && (
+          <p className="notice bid-warn">
+            Blob ještě není připojený na Vercelu — nahrání souborů zatím
+            neprojde. Postup: <strong>Storage → Blob → Create Database /
+            Connect to Project</strong> (token se doplní sám). Do té doby
+            použijte záložní URL níže.
+          </p>
+        )}
+      </fieldset>
 
-      <label>
-        Nebo URL obrázku (volitelné)
-        <input
-          name="imageUrl"
-          type="url"
-          placeholder="https://…"
-          autoComplete="off"
-        />
-      </label>
+      <button
+        type="button"
+        className="linkish"
+        onClick={() => setShowUrlFallback((v) => !v)}
+      >
+        {showUrlFallback
+          ? "Skrýt záložní URL obrázku"
+          : "Záložní možnost: vložit URL obrázku"}
+      </button>
+      {showUrlFallback && (
+        <label>
+          URL obrázku (volitelné, když nejde nahrát soubor)
+          <input
+            name="imageUrl"
+            type="url"
+            placeholder="https://…"
+            autoComplete="off"
+          />
+        </label>
+      )}
 
       <div className="create-row">
         <label>

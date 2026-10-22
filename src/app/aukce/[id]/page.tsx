@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auctionImageList } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
 import { BidPanel } from "./bid-panel";
 
@@ -47,6 +48,7 @@ export default async function AuctionDetail({
     dateStyle: "medium",
     timeStyle: "short",
   });
+  const images = auctionImageList(auction);
 
   return (
     <main>
@@ -63,12 +65,17 @@ export default async function AuctionDetail({
       </header>
 
       <section className="detail">
-        {auction.imageUrl && (
-          <img
-            className="detail-image"
-            src={auction.imageUrl}
-            alt={auction.title}
-          />
+        {images.length > 0 && (
+          <div className="detail-gallery">
+            {images.map((src, i) => (
+              <img
+                key={src}
+                className={i === 0 ? "detail-image" : "detail-image thumb"}
+                src={src}
+                alt={`${auction.title} — fotka ${i + 1}`}
+              />
+            ))}
+          </div>
         )}
         <div className="detail-body">
           <p className="eyebrow">DETAIL AUKCE</p>

@@ -24,6 +24,8 @@ model Auction {
   category      String        @db.VarChar(60)
   condition     String        @db.VarChar(40)
   imageUrl      String?       @db.Text
+  /// Extra / all gallery URLs (first also mirrored to imageUrl for cards).
+  imageUrls     String[]      @default([])
   startingPrice Int
   currentPrice  Int
   status        AuctionStatus @default(ACTIVE)

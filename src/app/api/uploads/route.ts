@@ -5,20 +5,16 @@ import { isBlobUploadConfigured } from "@/lib/flags";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_BYTES = 4.5 * 1024 * 1024; // stay under typical serverless body limits
-const ALLOWED = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
+const MAX_BYTES = 4.5 * 1024 * 1024;
+const MAX_FILES = 5;
+const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(req: Request) {
   if (!isBlobUploadConfigured()) {
     return NextResponse.json(
       {
         error:
-          "Nahrávání souborů není připravené. Ve Vercelu otevřete Storage → Blob a připojte ho k projektu (token BLOB_READ_WRITE_TOKEN se doplní sám). Do té doby použijte pole s URL obrázku.",
+          "Nahrávání ze souboru není připravené. Ve Vercelu: Storage → Blob → Create / Connect to project (doplní se BLOB_READ_WRITE_TOKEN). Do té doby můžete použít záložní pole s URL obrázku.",
         blobConfigured: false,
       },
       { status: 503 },
@@ -35,36 +31,56 @@ export async function POST(req: Request) {
     );
   }
 
-  const file = form.get("file");
-  if (!(file instanceof File) || file.size === 0) {
+  const files = [
+    ...form.getAll("files"),
+    ...form.getAll("file"),
+  ].filter((f): f is File => f instanceof File && f.size > 0);
+
+  if (files.length === 0) {
     return NextResponse.json(
-      { error: "Vyberte obrázek (JPEG, PNG, WebP nebo GIF)." },
+      { error: "Vyberte alespoň jeden obrázek (JPEG, PNG nebo WebP)." },
       { status: 400 },
     );
   }
-  if (!ALLOWED.has(file.type)) {
+  if (files.length > MAX_FILES) {
     return NextResponse.json(
-      { error: "Povolené formáty: JPEG, PNG, WebP, GIF." },
-      { status: 400 },
-    );
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json(
-      { error: "Soubor je příliš velký (max. cca 4,5 MB)." },
+      { error: `Najednou lze nahrát nejvýše ${MAX_FILES} příloh.` },
       { status: 400 },
     );
   }
 
-  const safeName = file.name.replace(/[^\w.\-]+/g, "_").slice(0, 80) || "photo";
-  const pathname = `auctions/${Date.now()}-${safeName}`;
+  for (const file of files) {
+    if (!ALLOWED.has(file.type)) {
+      return NextResponse.json(
+        {
+          error: `Soubor „${file.name}“ má nepodporovaný formát. Povolené: JPEG, PNG, WebP.`,
+        },
+        { status: 400 },
+      );
+    }
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json(
+        {
+          error: `Soubor „${file.name}“ je příliš velký (max. 4,5 MB na soubor).`,
+        },
+        { status: 400 },
+      );
+    }
+  }
 
+  const urls: string[] = [];
   try {
-    const blob = await put(pathname, file, {
-      access: "public",
-      contentType: file.type,
-      addRandomSuffix: true,
-    });
-    return NextResponse.json({ url: blob.url, pathname: blob.pathname });
+    for (const file of files) {
+      const safeName =
+        file.name.replace(/[^\w.\-]+/g, "_").slice(0, 80) || "photo";
+      const pathname = `auctions/${Date.now()}-${safeName}`;
+      const blob = await put(pathname, file, {
+        access: "public",
+        contentType: file.type,
+        addRandomSuffix: true,
+      });
+      urls.push(blob.url);
+    }
   } catch (err) {
     console.error("blob upload failed", err);
     return NextResponse.json(
@@ -75,4 +91,9 @@ export async function POST(req: Request) {
       { status: 502 },
     );
   }
+
+  return NextResponse.json({
+    urls,
+    url: urls[0] ?? null,
+  });
 }
