@@ -236,7 +236,13 @@ export function BidFields() {
 
   return (
     <form id={FORM_ID} className="bid-form" onSubmit={onSubmit}>
-      <h2>Přihodit</h2>
+      <button
+        className="btn btn-bid-large"
+        type="submit"
+        disabled={pending}
+      >
+        {pending ? "Odesílám…" : "Přihodit"}
+      </button>
       <label>
         Jméno
         <input
@@ -281,13 +287,6 @@ export function BidFields() {
       )}
       {error && <p className="bid-error">{error}</p>}
       {ok && <p className="bid-ok">{ok}</p>}
-      <button
-        className="btn btn-bid-large"
-        type="submit"
-        disabled={pending}
-      >
-        {pending ? "Odesílám…" : "Přihodit"}
-      </button>
     </form>
   );
 }

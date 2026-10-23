@@ -14,13 +14,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const statusLabel: Record<string, string> = {
-  DRAFT: "Koncept",
-  ACTIVE: "Aktivní",
-  ENDED: "Ukončená",
-  CANCELLED: "Zrušená",
-};
-
 export default async function AuctionDetail({
   params,
 }: {
@@ -114,10 +107,9 @@ export default async function AuctionDetail({
 
             <p className="detail-meta">Stav: {auction.condition}</p>
             <p className="detail-meta">Vkládá: {seller}</p>
-            <p className="detail-meta">
-              {statusLabel[auction.status] ?? auction.status}
-              {ended && auction.status === "ACTIVE" ? " (čas vypršel)" : ""}
-            </p>
+
+            <h2>Popis aukce</h2>
+            <p className="detail-desc">{auction.description}</p>
 
             <AuctionCountdown
               endsAt={auction.endsAt.toISOString()}
@@ -128,9 +120,6 @@ export default async function AuctionDetail({
             </p>
 
             <BidFields />
-
-            <h2>Popis</h2>
-            <p className="detail-desc">{auction.description}</p>
           </div>
         </section>
       </BidProvider>
