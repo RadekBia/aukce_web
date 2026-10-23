@@ -182,26 +182,15 @@ export function BidProvider({
   );
 }
 
+/** Prices only — sits under category; Přihodit lives in BidFields above popis. */
 export function BidPriceRow() {
-  const { canBid, price, startingPrice, pending } = useBidCtx();
+  const { price, startingPrice } = useBidCtx();
 
   return (
-    <div className="detail-prices detail-prices-with-bid">
+    <div className="detail-prices">
       <div className="detail-price-current">
         <small>Aktuální cena</small>
-        <div className="detail-price-current-row">
-          <strong className="price-lg">{money(price)}</strong>
-          {canBid && (
-            <button
-              className="btn"
-              type="submit"
-              form={FORM_ID}
-              disabled={pending}
-            >
-              {pending ? "Odesílám…" : "Přihodit"}
-            </button>
-          )}
-        </div>
+        <strong className="price-lg">{money(price)}</strong>
       </div>
       <div>
         <small>Vyvolávací cena</small>
@@ -211,6 +200,7 @@ export function BidPriceRow() {
   );
 }
 
+/** Bid form with navýšení + enlarged Přihodit — placed above popis. */
 export function BidFields() {
   const {
     canBid,
@@ -224,6 +214,7 @@ export function BidFields() {
     setRaise,
     error,
     ok,
+    pending,
     onSubmit,
   } = useBidCtx();
 
@@ -290,6 +281,13 @@ export function BidFields() {
       )}
       {error && <p className="bid-error">{error}</p>}
       {ok && <p className="bid-ok">{ok}</p>}
+      <button
+        className="btn btn-bid-large"
+        type="submit"
+        disabled={pending}
+      >
+        {pending ? "Odesílám…" : "Přihodit"}
+      </button>
     </form>
   );
 }
