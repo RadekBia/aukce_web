@@ -4,6 +4,7 @@ import { AuctionCountdown } from "@/components/auction-countdown";
 import { SiteHeader } from "@/components/site-header";
 import { auctionImageList } from "@/lib/auction-images";
 import { sellerDisplayName } from "@/lib/auction-rules";
+import { resolveAuctionWinner } from "@/lib/auction-winner";
 import { prisma } from "@/lib/prisma";
 import {
   BidFields,
@@ -32,7 +33,7 @@ export default async function AuctionDetail({
     if (auction) {
       bids = await prisma.bid.findMany({
         where: { auctionId: id },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 50,
       });
     }
@@ -52,6 +53,12 @@ export default async function AuctionDetail({
     auction.sellerFirstName,
     auction.sellerLastName,
   );
+  const bidsAsc = [...bids].reverse();
+  const leader = resolveAuctionWinner({
+    winnerFirstName: auction.winnerFirstName,
+    winnerLastName: auction.winnerLastName,
+    bidsAsc,
+  });
   const initialBids = bids.map((b) => ({
     id: b.id,
     bidderId: b.bidderId,
@@ -107,6 +114,11 @@ export default async function AuctionDetail({
 
             <p className="detail-meta">Stav: {auction.condition}</p>
             <p className="detail-meta">Vkládá: {seller}</p>
+            {leader.source !== "none" && (
+              <p className="detail-leader">
+                Vede: <strong>{leader.display}</strong>
+              </p>
+            )}
 
             <h2>Popis aukce</h2>
             <p className="detail-desc">{auction.description}</p>
