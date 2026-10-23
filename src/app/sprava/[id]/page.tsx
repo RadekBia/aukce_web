@@ -52,6 +52,8 @@ export default async function SpravaEditPage({ params }: Props) {
             description: auction.description,
             category: auction.category,
             condition: auction.condition,
+            sellerFirstName: auction.sellerFirstName,
+            sellerLastName: auction.sellerLastName,
             startingPrice: auction.startingPrice,
             currentPrice: auction.currentPrice,
             status: auction.status,

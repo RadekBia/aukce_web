@@ -18,23 +18,26 @@ enum AuctionStatus {
 }
 
 model Auction {
-  id            String         @id @default(cuid())
-  title         String         @db.VarChar(120)
-  description   String         @db.Text
-  category      String         @db.VarChar(60)
-  condition     String         @db.VarChar(40)
-  imageUrl      String?        @db.Text
+  id              String         @id @default(cuid())
+  title           String         @db.VarChar(120)
+  description     String         @db.Text
+  category        String         @db.VarChar(60)
+  condition       String         @db.VarChar(40)
+  /// Person listing the auction (not a bidder).
+  sellerFirstName String         @db.VarChar(40)
+  sellerLastName  String         @db.VarChar(40)
+  imageUrl        String?        @db.Text
   /// Legacy / external URL gallery (pasted https links). DB-backed photos use `images`.
-  imageUrls     String[]       @default([])
-  startingPrice Int
-  currentPrice  Int
-  status        AuctionStatus  @default(ACTIVE)
-  startsAt      DateTime       @default(now())
-  endsAt        DateTime
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  bids          Bid[]
-  images        AuctionImage[]
+  imageUrls       String[]       @default([])
+  startingPrice   Int
+  currentPrice    Int
+  status          AuctionStatus  @default(ACTIVE)
+  startsAt        DateTime       @default(now())
+  endsAt          DateTime
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  bids            Bid[]
+  images          AuctionImage[]
 
   @@index([status, endsAt])
   @@index([category])

@@ -28,6 +28,8 @@ export type EditAuctionData = {
   description: string;
   category: string;
   condition: string;
+  sellerFirstName: string;
+  sellerLastName: string;
   startingPrice: number;
   currentPrice: number;
   status: string;
@@ -36,7 +38,6 @@ export type EditAuctionData = {
   photoCount: number;
 };
 
-/** Format ISO date for `<input type="datetime-local">` in local timezone. */
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -48,7 +49,6 @@ export function AdminEditForm({ auction }: { auction: EditAuctionData }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const hasBids = auction.bidCount > 0;
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -64,24 +64,28 @@ export function AdminEditForm({ auction }: { auction: EditAuctionData }) {
     }
 
     const startingPrice = Number(fd.get("startingPrice"));
-    if (!hasBids) {
-      if (!Number.isInteger(startingPrice) || startingPrice < 1) {
-        setError("Vyvolávací cena musí být celé kladné číslo.");
-        return;
-      }
+    const currentPrice = Number(fd.get("currentPrice"));
+    if (!Number.isInteger(startingPrice) || startingPrice < 1) {
+      setError("Vyvolávací cena musí být celé kladné číslo.");
+      return;
+    }
+    if (!Number.isInteger(currentPrice) || currentPrice < 1) {
+      setError("Aktuální cena musí být celé kladné číslo.");
+      return;
     }
 
-    const body: Record<string, unknown> = {
+    const body = {
       title: String(fd.get("title") ?? "").trim(),
       description: String(fd.get("description") ?? "").trim(),
       category: String(fd.get("category") ?? "").trim(),
       condition: String(fd.get("condition") ?? "").trim(),
+      sellerFirstName: String(fd.get("sellerFirstName") ?? "").trim(),
+      sellerLastName: String(fd.get("sellerLastName") ?? "").trim(),
       status: String(fd.get("status") ?? "").trim(),
       endsAt: endsAt.toISOString(),
+      startingPrice,
+      currentPrice,
     };
-    if (!hasBids) {
-      body.startingPrice = startingPrice;
-    }
 
     setPending(true);
     try {
@@ -118,9 +122,31 @@ export function AdminEditForm({ auction }: { auction: EditAuctionData }) {
   return (
     <form className="create-form" onSubmit={onSubmit}>
       <p className="notice">
-        Úprava existující aukce. Příhozy zůstávají. Fotky se nemění — textová
-        pole lze uložit bez nového nahrání.
+        Úprava existující aukce. Příhozy zůstávají. Fotky se nemění.
       </p>
+
+      <div className="create-row">
+        <label>
+          Jméno vkladatele
+          <input
+            name="sellerFirstName"
+            required
+            minLength={1}
+            maxLength={40}
+            defaultValue={auction.sellerFirstName}
+          />
+        </label>
+        <label>
+          Příjmení vkladatele
+          <input
+            name="sellerLastName"
+            required
+            minLength={1}
+            maxLength={40}
+            defaultValue={auction.sellerLastName}
+          />
+        </label>
+      </div>
 
       <label>
         Název
@@ -193,55 +219,40 @@ export function AdminEditForm({ auction }: { auction: EditAuctionData }) {
       <div className="create-row">
         <label>
           Vyvolávací cena (Kč)
-          {hasBids ? (
-            <>
-              <input
-                type="number"
-                value={auction.startingPrice}
-                readOnly
-                disabled
-                aria-readonly="true"
-              />
-              <span className="bid-hint">
-                Nelze měnit — aukce má {auction.bidCount} příhozů. Aktuální cena{" "}
-                {auction.currentPrice} Kč zůstává.
-              </span>
-            </>
-          ) : (
-            <input
-              name="startingPrice"
-              type="number"
-              inputMode="numeric"
-              required
-              min={1}
-              step={1}
-              defaultValue={auction.startingPrice}
-            />
-          )}
+          <input
+            name="startingPrice"
+            type="number"
+            inputMode="numeric"
+            required
+            min={1}
+            step={1}
+            defaultValue={auction.startingPrice}
+          />
         </label>
         <label>
           Aktuální cena (Kč)
           <input
+            name="currentPrice"
             type="number"
-            value={auction.currentPrice}
-            readOnly
-            disabled
-            aria-readonly="true"
+            inputMode="numeric"
+            required
+            min={1}
+            step={1}
+            defaultValue={auction.currentPrice}
           />
-          <span className="bid-hint">
-            {hasBids
-              ? "Určena příhozy — při uložení se nemění."
-              : "Bez příhozů se při změně vyvolávací ceny sjednotí."}
-          </span>
         </label>
       </div>
+      <p className="bid-hint">
+        Ceny lze upravit i když aukce má {auction.bidCount} příhozů — příhozy
+        se nesmažou.
+      </p>
 
       <fieldset className="create-attachments">
         <legend>Fotky</legend>
         <p className="bid-hint">
           {auction.photoCount > 0
-            ? `Uloženo ${auction.photoCount} fotek v Neon — zůstávají beze změny.`
-            : "Žádné fotky v databázi. Úprava textových polí fotky nevyžaduje."}
+            ? `Uloženo ${auction.photoCount} fotek — zůstávají beze změny.`
+            : "Žádné fotky. Úprava textových polí fotky nevyžaduje."}
         </p>
       </fieldset>
 

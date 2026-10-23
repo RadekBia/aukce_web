@@ -14,7 +14,7 @@ export function SiteHeader({
   return (
     <header>
       <Link className="brand" href="/">
-        Aukceee <span>na dobrou Věc</span>
+        Aukceee <span>na dobrou věc</span>
       </Link>
       {nav ? <nav>{nav}</nav> : <nav aria-hidden="true" />}
       <div className="header-actions">

@@ -6,6 +6,10 @@ import {
   BROWSER_MAX_ORIGINAL_BYTES,
   compressImageInBrowser,
 } from "@/lib/browser-compress";
+import {
+  AUCTION_ENDS_LABEL_CS,
+  AUCTION_STARTING_PRICE,
+} from "@/lib/auction-rules";
 
 const CATEGORIES = [
   "Domácnost",
@@ -35,8 +39,6 @@ export function CreateAuctionForm() {
     const fileList = fd
       .getAll("imageFiles")
       .filter((f): f is File => f instanceof File && f.size > 0);
-    const startingPrice = Number(fd.get("startingPrice"));
-    const durationHours = Number(fd.get("durationHours"));
 
     if (fileList.length > MAX_FILES) {
       setError(`Najednou lze nahrát nejvýše ${MAX_FILES} příloh.`);
@@ -83,11 +85,11 @@ export function CreateAuctionForm() {
         description: String(fd.get("description") ?? "").trim(),
         category: String(fd.get("category") ?? "").trim(),
         condition: String(fd.get("condition") ?? "").trim(),
+        sellerFirstName: String(fd.get("sellerFirstName") ?? "").trim(),
+        sellerLastName: String(fd.get("sellerLastName") ?? "").trim(),
         imageIds,
         imageUrl: imageIds.length === 0 ? imageRaw : "",
         imageUrls: imageIds.length === 0 && imageRaw ? [imageRaw] : [],
-        startingPrice,
-        durationHours,
       };
 
       const res = await fetch("/api/auctions", {
@@ -115,6 +117,29 @@ export function CreateAuctionForm() {
 
   return (
     <form className="create-form" onSubmit={onSubmit}>
+      <div className="create-row">
+        <label>
+          Jméno
+          <input
+            name="sellerFirstName"
+            required
+            minLength={1}
+            maxLength={40}
+            autoComplete="given-name"
+          />
+        </label>
+        <label>
+          Příjmení
+          <input
+            name="sellerLastName"
+            required
+            minLength={1}
+            maxLength={40}
+            autoComplete="family-name"
+          />
+        </label>
+      </div>
+
       <label>
         Název
         <input name="title" required minLength={3} maxLength={120} />
@@ -213,7 +238,7 @@ export function CreateAuctionForm() {
       </button>
       {showUrlFallback && (
         <label>
-          URL obrázku (volitelné — neukládá se jako soubor v DB)
+          URL obrázku (volitelné)
           <input
             name="imageUrl"
             type="url"
@@ -223,33 +248,10 @@ export function CreateAuctionForm() {
         </label>
       )}
 
-      <div className="create-row">
-        <label>
-          Vyvolávací cena (Kč)
-          <input
-            name="startingPrice"
-            type="number"
-            inputMode="numeric"
-            required
-            min={1}
-            step={1}
-            defaultValue={100}
-          />
-        </label>
-        <label>
-          Délka (hodiny)
-          <input
-            name="durationHours"
-            type="number"
-            inputMode="numeric"
-            required
-            min={1}
-            max={720}
-            step={1}
-            defaultValue={48}
-          />
-        </label>
-      </div>
+      <p className="bid-hint">
+        Vyvolávací cena: <strong>{AUCTION_STARTING_PRICE}&nbsp;Kč</strong>.
+        Konec aukce: <strong>{AUCTION_ENDS_LABEL_CS}</strong> (nelze změnit).
+      </p>
 
       {error && <p className="bid-error">{error}</p>}
       <button className="btn" type="submit" disabled={pending}>

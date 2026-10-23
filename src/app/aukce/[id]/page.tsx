@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AuctionCountdown } from "@/components/auction-countdown";
 import { SiteHeader } from "@/components/site-header";
 import { auctionImageList } from "@/lib/auction-images";
+import { sellerDisplayName } from "@/lib/auction-rules";
 import { prisma } from "@/lib/prisma";
 import {
   BidFields,
@@ -38,7 +39,7 @@ export default async function AuctionDetail({
     if (auction) {
       bids = await prisma.bid.findMany({
         where: { auctionId: id },
-        orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
+        orderBy: { createdAt: "desc" },
         take: 50,
       });
     }
@@ -49,10 +50,15 @@ export default async function AuctionDetail({
 
   const ended = auction.endsAt.getTime() <= Date.now();
   const endsLabel = auction.endsAt.toLocaleString("cs-CZ", {
+    timeZone: "Europe/Prague",
     dateStyle: "medium",
     timeStyle: "short",
   });
   const images = auctionImageList(auction);
+  const seller = sellerDisplayName(
+    auction.sellerFirstName,
+    auction.sellerLastName,
+  );
   const initialBids = bids.map((b) => ({
     id: b.id,
     bidderId: b.bidderId,
@@ -104,6 +110,7 @@ export default async function AuctionDetail({
               <span className="cat-badge-value">{auction.category}</span>
             </p>
             <p className="detail-meta">Stav: {auction.condition}</p>
+            <p className="detail-meta">Vkládá: {seller}</p>
             <p className="detail-meta">
               {statusLabel[auction.status] ?? auction.status}
               {ended && auction.status === "ACTIVE" ? " (čas vypršel)" : ""}

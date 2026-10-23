@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { MIN_BID_RAISE } from "@/lib/auction-rules";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -8,7 +9,8 @@ export const dynamic = "force-dynamic";
 const bidSchema = z.object({
   firstName: z.string().trim().min(1).max(40),
   lastName: z.string().trim().min(1).max(40),
-  amount: z.number().int().positive(),
+  /** Raise above current price (Kč), not the new total. */
+  raise: z.number().int().min(MIN_BID_RAISE),
 });
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -25,7 +27,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 
   const bids = await prisma.bid.findMany({
     where: { auctionId: id },
-    orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
+    orderBy: { createdAt: "desc" },
     take: 50,
   });
   return NextResponse.json({ bids });
@@ -44,15 +46,21 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error:
-          "Zadejte jméno, příjmení a kladnou celou částku v Kč.",
+        error: `Zadejte jméno, příjmení a navýšení alespoň ${MIN_BID_RAISE} Kč.`,
       },
       { status: 400 },
     );
   }
 
-  const { firstName, lastName, amount } = parsed.data;
+  const { firstName, lastName, raise } = parsed.data;
   const bidderId = `${firstName} ${lastName}`.replace(/\s+/g, " ").trim();
+
+  if (raise < MIN_BID_RAISE) {
+    return NextResponse.json(
+      { error: `Minimální navýšení je ${MIN_BID_RAISE} Kč.` },
+      { status: 400 },
+    );
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -74,11 +82,20 @@ export async function POST(req: Request, ctx: Ctx) {
           error: "Aukce už skončila.",
         };
       }
-      if (amount <= auction.currentPrice) {
+      if (raise < MIN_BID_RAISE) {
         return {
           ok: false as const,
           status: 409,
-          error: `Příhoz musí být vyšší než aktuální cena (${auction.currentPrice} Kč).`,
+          error: `Minimální navýšení je ${MIN_BID_RAISE} Kč.`,
+        };
+      }
+
+      const newPrice = auction.currentPrice + raise;
+      if (newPrice < auction.currentPrice + MIN_BID_RAISE) {
+        return {
+          ok: false as const,
+          status: 409,
+          error: `Příhoz musí navýšit aktuální cenu alespoň o ${MIN_BID_RAISE} Kč.`,
         };
       }
 
@@ -86,12 +103,12 @@ export async function POST(req: Request, ctx: Ctx) {
         data: {
           auctionId: id,
           bidderId,
-          amount,
+          amount: raise,
         },
       });
       const updated = await tx.auction.update({
         where: { id },
-        data: { currentPrice: amount },
+        data: { currentPrice: newPrice },
       });
       return { ok: true as const, bid, auction: updated };
     });

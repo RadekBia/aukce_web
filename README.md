@@ -1,4 +1,4 @@
-# Aukceee na dobrou Věc
+# Aukceee na dobrou věc
 
 Next.js 15 + Prisma auction listing app (Czech UI).
 

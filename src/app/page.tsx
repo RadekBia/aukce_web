@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuctionCountdown } from "@/components/auction-countdown";
 import { SiteHeader } from "@/components/site-header";
 import { coverImageUrl } from "@/lib/auction-images";
+import { sellerDisplayName } from "@/lib/auction-rules";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -157,9 +158,20 @@ export default async function Home({
                     <span className="cat-badge-value">{a.category}</span>
                   </p>
                   <p className="card-condition">Stav: {a.condition}</p>
+                  <p className="card-condition">
+                    Vkládá:{" "}
+                    {sellerDisplayName(a.sellerFirstName, a.sellerLastName)}
+                  </p>
                   <h3>{a.title}</h3>
                   <strong>{money(a.currentPrice)}</strong>
-                  <p>Končí {a.endsAt.toLocaleDateString("cs-CZ")}</p>
+                  <p>
+                    Končí{" "}
+                    {a.endsAt.toLocaleString("cs-CZ", {
+                      timeZone: "Europe/Prague",
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </p>
                   <AuctionCountdown
                     endsAt={a.endsAt.toISOString()}
                     variant="compact"
@@ -195,7 +207,7 @@ export default async function Home({
           </article>
         </div>
       </section>
-      <footer>Aukceee na dobrou Věc · První funkční základ</footer>
+      <footer>Aukceee na dobrou věc · První funkční základ</footer>
     </main>
   );
 }
