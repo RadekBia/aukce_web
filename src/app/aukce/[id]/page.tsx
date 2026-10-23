@@ -99,7 +99,13 @@ export default async function AuctionDetail({
                 ))}
               </div>
             )}
-            <BidList />
+            <div className="detail-under-photo">
+              <div className="detail-desc-panel">
+                <h2>Popis aukce</h2>
+                <p className="detail-desc">{auction.description}</p>
+              </div>
+              <BidList />
+            </div>
           </div>
 
           <div className="detail-body">
@@ -119,9 +125,6 @@ export default async function AuctionDetail({
                 Vede: <strong>{leader.display}</strong>
               </p>
             )}
-
-            <h2>Popis aukce</h2>
-            <p className="detail-desc">{auction.description}</p>
 
             <AuctionCountdown
               endsAt={auction.endsAt.toISOString()}
