@@ -38,7 +38,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |----------|----------|-------|
 | `DATABASE_URL` | yes | Pooled Postgres URL (Neon pooled / local) |
 | `DIRECT_URL` | yes | Direct Postgres URL for migrations (Neon direct; locally = `DATABASE_URL`) |
-| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Default **ON** until SSO (`src/lib/flags.ts`). Set `false` to lock create early. |
+| `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Default **ON** (`src/lib/flags.ts`). Set `false` to lock create. |
 | (photos) | — | Stored in Neon (`AuctionImage` bytea), served at `/api/images/[id]`. No Blob token. |
 
 ### Neon + Vercel
@@ -51,16 +51,14 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Full runbook: project store `docs/aukce-setup.md`.
 
-Google SSO / auth and Railway are out of scope.
+Railway is out of scope. Prefer **Neon + Vercel** for hosting.
 
-## Bidding (local-dev)
+## Bidding
 
-On `/aukce/[id]`, enter a name or e-mail and an amount higher than the current price.
-`POST /api/auctions/:id/bids` with `{ "bidder", "amount" }` stores `bidder` in `Bid.bidderId`.
-This is **not** secure production identity — Google SSO remains deferred.
+On `/aukce/[id]`, enter **jméno**, **příjmení**, and an amount higher than the current price.
+`POST /api/auctions/:id/bids` with `{ "firstName", "lastName", "amount" }` stores `"Jméno Příjmení"` as the bidder identity.
 
 ## Known gaps
 
-- Create-auction without login is a **local-only** escape hatch; not safe for production.
-- Bidder field is free-text (no verified identity yet).
-- Google SSO is deferred. Prefer **Neon + Vercel** for hosting (Railway out of scope).
+- Create without login is open by default; lock with the env flag if needed.
+- Bidder identity is first + last name (not verified login).

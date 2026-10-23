@@ -115,11 +115,6 @@ export function CreateAuctionForm() {
 
   return (
     <form className="create-form" onSubmit={onSubmit}>
-      <p className="notice">
-        Vytváření aukcí vyžaduje přihlášení přes Google. Fotky se ukládají do
-        Neon databáze (ne Vercel Blob).
-      </p>
-
       <label>
         Název
         <input name="title" required minLength={3} maxLength={120} />
@@ -167,10 +162,8 @@ export function CreateAuctionForm() {
         <legend>Přílohy — fotky z počítače</legend>
         <p className="bid-hint">
           1–{MAX_FILES} souborů (JPEG, PNG nebo WebP), každý až{" "}
-          <strong>20&nbsp;MB</strong>. Fotka se{" "}
-          <strong>automaticky zkomprimuje v prohlížeči</strong> (nejdelší strana
-          max. 1600&nbsp;px, kvalita cca 80) a teprve pak nahraje do Neon — aby
-          prošla limitem serveru.
+          <strong>20&nbsp;MB</strong>. Fotka se automaticky zkomprimuje
+          (nejdelší strana max. 1600&nbsp;px).
         </p>
         <label className="file-picker">
           <span className="btn secondary file-picker-btn">

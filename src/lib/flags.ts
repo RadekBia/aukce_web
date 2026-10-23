@@ -12,13 +12,13 @@ function parseTriState(raw: string | undefined): boolean | undefined {
 }
 
 /**
- * Unauthenticated create is OFF — Google sign-in is required.
- * Emergency reopen (not recommended): ENABLE_UNAUTHENTICATED_AUCTION_CREATION=true
+ * Create without login is ON by default.
+ * Lock with: ENABLE_UNAUTHENTICATED_AUCTION_CREATION=false
  */
 export function isUnauthenticatedAuctionCreationEnabled(): boolean {
   const explicit = parseTriState(
     process.env.ENABLE_UNAUTHENTICATED_AUCTION_CREATION,
   );
   if (explicit !== undefined) return explicit;
-  return false;
+  return true;
 }
