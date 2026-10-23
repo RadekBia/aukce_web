@@ -126,10 +126,11 @@ export default async function AuctionDetail({
             <p className="detail-ends">
               {ended ? "Skončila" : "Končí"} {endsLabel}
             </p>
-            <h2>Popis</h2>
-            <p className="detail-desc">{auction.description}</p>
 
             <BidFields />
+
+            <h2>Popis</h2>
+            <p className="detail-desc">{auction.description}</p>
           </div>
         </section>
       </BidProvider>
