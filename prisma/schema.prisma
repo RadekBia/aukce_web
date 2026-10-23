@@ -26,6 +26,9 @@ model Auction {
   /// Person listing the auction (not a bidder).
   sellerFirstName String         @db.VarChar(40)
   sellerLastName  String         @db.VarChar(40)
+  /// Admin winner override; both null/empty → highest bidder (or none).
+  winnerFirstName String?        @db.VarChar(40)
+  winnerLastName  String?        @db.VarChar(40)
   imageUrl        String?        @db.Text
   /// Legacy / external URL gallery (pasted https links). DB-backed photos use `images`.
   imageUrls       String[]       @default([])
