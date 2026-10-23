@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuctionCountdown } from "@/components/auction-countdown";
 import { SiteHeader } from "@/components/site-header";
 import { coverImageUrl } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
@@ -159,6 +160,10 @@ export default async function Home({
                   <h3>{a.title}</h3>
                   <strong>{money(a.currentPrice)}</strong>
                   <p>Končí {a.endsAt.toLocaleDateString("cs-CZ")}</p>
+                  <AuctionCountdown
+                    endsAt={a.endsAt.toISOString()}
+                    variant="compact"
+                  />
                   <Link className="btn secondary" href={`/aukce/${a.id}`}>
                     Zobrazit aukci →
                   </Link>

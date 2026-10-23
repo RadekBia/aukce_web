@@ -29,6 +29,7 @@ const FORM_ID = "aukce-bid-form";
 type BidCtx = {
   auctionId: string;
   canBid: boolean;
+  timeEnded: boolean;
   price: number;
   startingPrice: number;
   firstName: string;
@@ -56,18 +57,23 @@ export function BidProvider({
   auctionId,
   currentPrice,
   startingPrice,
-  canBid,
+  /** Status allows bidding (e.g. ACTIVE); time is checked live via endsAt. */
+  statusAllowsBid,
+  endsAt,
   initialBids,
   children,
 }: {
   auctionId: string;
   currentPrice: number;
   startingPrice: number;
-  canBid: boolean;
+  statusAllowsBid: boolean;
+  endsAt: string;
   initialBids: BidRow[];
   children: ReactNode;
 }) {
   const router = useRouter();
+  const endsAtMs = new Date(endsAt).getTime();
+  const [now, setNow] = useState(() => Date.now());
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [amount, setAmount] = useState(String(currentPrice + 10));
@@ -76,6 +82,14 @@ export function BidProvider({
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  const timeEnded = now >= endsAtMs;
+  const canBid = statusAllowsBid && !timeEnded;
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     setPrice(currentPrice);
@@ -102,6 +116,11 @@ export function BidProvider({
       setError(
         `Příhoz musí být vyšší než aktuální cena (${money(price)}).`,
       );
+      return;
+    }
+    if (Date.now() >= endsAtMs) {
+      setError("Aukce už skončila.");
+      setNow(Date.now());
       return;
     }
     if (!canBid) {
@@ -145,6 +164,7 @@ export function BidProvider({
       value={{
         auctionId,
         canBid,
+        timeEnded,
         price,
         startingPrice,
         firstName,
@@ -199,6 +219,7 @@ export function BidPriceRow() {
 export function BidFields() {
   const {
     canBid,
+    timeEnded,
     price,
     firstName,
     setFirstName,
@@ -212,7 +233,13 @@ export function BidFields() {
   } = useBidCtx();
 
   if (!canBid) {
-    return <p className="notice">Do této aukce už nelze přihazovat.</p>;
+    return (
+      <p className="notice">
+        {timeEnded
+          ? "Aukce skončila — nové příhozy už nepřijímáme."
+          : "Do této aukce už nelze přihazovat."}
+      </p>
+    );
   }
 
   return (
