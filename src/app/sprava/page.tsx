@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { isAdminConfigured, isAdminSession } from "@/lib/admin";
+import { runningTotalsAfterBids } from "@/lib/recompute-auction-price";
 import { prisma } from "@/lib/prisma";
 import { AdminPanel } from "./admin-panel";
 import { AdminLoginForm } from "./login-form";
@@ -29,6 +30,7 @@ export default async function SpravaPage({
   let bids: {
     id: string;
     amount: number;
+    resultingPrice: number;
     bidderId: string;
     createdAt: string;
     auctionId: string;
@@ -45,9 +47,14 @@ export default async function SpravaPage({
       prisma.bid.findMany({
         orderBy: { createdAt: "desc" },
         take: 100,
-        include: { auction: { select: { id: true, title: true } } },
+        include: {
+          auction: {
+            select: { id: true, title: true, startingPrice: true },
+          },
+        },
       }),
     ]);
+
     auctions = rows.map((a) => ({
       id: a.id,
       title: a.title,
@@ -56,9 +63,35 @@ export default async function SpravaPage({
       endsAt: a.endsAt.toISOString(),
       bidCount: a._count.bids,
     }));
+
+    const auctionIds = Array.from(new Set(bidRows.map((b) => b.auctionId)));
+    const startingByAuction = new Map(
+      bidRows.map((b) => [b.auctionId, b.auction.startingPrice] as const),
+    );
+
+    const allBidsAsc =
+      auctionIds.length === 0
+        ? []
+        : await prisma.bid.findMany({
+            where: { auctionId: { in: auctionIds } },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            select: { id: true, auctionId: true, amount: true },
+          });
+
+    const resultingByBidId = new Map<string, number>();
+    for (const aid of auctionIds) {
+      const start = startingByAuction.get(aid) ?? 0;
+      const forAuction = allBidsAsc.filter((b) => b.auctionId === aid);
+      const totals = runningTotalsAfterBids(start, forAuction);
+      for (const [bidId, total] of totals) {
+        resultingByBidId.set(bidId, total);
+      }
+    }
+
     bids = bidRows.map((b) => ({
       id: b.id,
       amount: b.amount,
+      resultingPrice: resultingByBidId.get(b.id) ?? b.auction.startingPrice + b.amount,
       bidderId: b.bidderId,
       createdAt: b.createdAt.toISOString(),
       auctionId: b.auction.id,
