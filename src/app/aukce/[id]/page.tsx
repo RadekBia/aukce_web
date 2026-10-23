@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AuctionCountdown } from "@/components/auction-countdown";
 import { SiteHeader } from "@/components/site-header";
 import { auctionImageList } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
@@ -47,7 +48,6 @@ export default async function AuctionDetail({
   if (!auction) notFound();
 
   const ended = auction.endsAt.getTime() <= Date.now();
-  const canBid = auction.status === "ACTIVE" && !ended;
   const endsLabel = auction.endsAt.toLocaleString("cs-CZ", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -75,7 +75,8 @@ export default async function AuctionDetail({
         auctionId={auction.id}
         currentPrice={auction.currentPrice}
         startingPrice={auction.startingPrice}
-        canBid={canBid}
+        statusAllowsBid={auction.status === "ACTIVE"}
+        endsAt={auction.endsAt.toISOString()}
         initialBids={initialBids}
       >
         <section className="detail">
@@ -110,6 +111,10 @@ export default async function AuctionDetail({
 
             <BidPriceRow />
 
+            <AuctionCountdown
+              endsAt={auction.endsAt.toISOString()}
+              variant="full"
+            />
             <p className="detail-ends">
               {ended ? "Skončila" : "Končí"} {endsLabel}
             </p>
