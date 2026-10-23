@@ -109,14 +109,15 @@ export default async function AuctionDetail({
               <span className="cat-badge-label">Kategorie</span>
               <span className="cat-badge-value">{auction.category}</span>
             </p>
+
+            <BidPriceRow />
+
             <p className="detail-meta">Stav: {auction.condition}</p>
             <p className="detail-meta">Vkládá: {seller}</p>
             <p className="detail-meta">
               {statusLabel[auction.status] ?? auction.status}
               {ended && auction.status === "ACTIVE" ? " (čas vypršel)" : ""}
             </p>
-
-            <BidPriceRow />
 
             <AuctionCountdown
               endsAt={auction.endsAt.toISOString()}
@@ -129,10 +130,6 @@ export default async function AuctionDetail({
             <p className="detail-desc">{auction.description}</p>
 
             <BidFields />
-
-            <Link className="btn secondary" href="/#aukce">
-              Další aukce
-            </Link>
           </div>
         </section>
       </BidProvider>
