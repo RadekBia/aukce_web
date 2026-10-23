@@ -188,7 +188,7 @@ export function CreateAuctionForm() {
         <p className="bid-hint">
           1–{MAX_FILES} souborů (JPEG, PNG nebo WebP), každý až{" "}
           <strong>20&nbsp;MB</strong>. Fotka se automaticky zkomprimuje
-          (nejdelší strana max. 1600&nbsp;px).
+          (bez omezení rozměrů v pixelech).
         </p>
         <label className="file-picker">
           <span className="btn secondary file-picker-btn">

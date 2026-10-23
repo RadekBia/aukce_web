@@ -62,7 +62,7 @@ export async function POST(req: Request) {
 
   try {
     const raw = Buffer.from(await file.arrayBuffer());
-    // Second pass with sharp for consistent max-edge / WebP storage.
+    // Second pass with sharp for consistent WebP storage (no pixel downscale).
     const { data, mimeType } = await compressAuctionImage(raw);
 
     if (data.length > IMAGE_MAX_STORED_BYTES) {
