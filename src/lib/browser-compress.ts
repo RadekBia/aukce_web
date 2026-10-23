@@ -3,7 +3,6 @@
 export const BROWSER_MAX_ORIGINAL_BYTES = 20 * 1024 * 1024;
 /** Stay under Vercel serverless body limit (~4.5 MB). */
 export const BROWSER_MAX_POST_BYTES = 4 * 1024 * 1024;
-export const BROWSER_MAX_EDGE = 1600;
 export const BROWSER_QUALITY = 0.8;
 
 function canvasToBlob(
@@ -24,7 +23,7 @@ function canvasToBlob(
 }
 
 /**
- * Resize longest edge to ~1600px, encode WebP (fallback JPEG) quality ~80.
+ * Encode WebP (fallback JPEG) at quality ~80 without downscaling by pixels.
  * Throws Error with Czech message on failure / oversize.
  */
 export async function compressImageInBrowser(file: File): Promise<File> {
@@ -46,12 +45,8 @@ export async function compressImageInBrowser(file: File): Promise<File> {
     );
   }
 
-  const scale = Math.min(
-    1,
-    BROWSER_MAX_EDGE / Math.max(bitmap.width, bitmap.height),
-  );
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const width = Math.max(1, bitmap.width);
+  const height = Math.max(1, bitmap.height);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
