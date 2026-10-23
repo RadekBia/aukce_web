@@ -274,7 +274,7 @@ export function BidFields() {
           type="number"
           inputMode="numeric"
           min={MIN_BID_RAISE}
-          step={MIN_BID_RAISE}
+          step={1}
           value={raise}
           onChange={(e) => setRaise(e.target.value)}
           required
