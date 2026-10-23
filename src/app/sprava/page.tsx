@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { isAdminConfigured, isAdminSession } from "@/lib/admin";
+import { resolveAuctionWinner } from "@/lib/auction-winner";
 import { runningTotalsAfterBids } from "@/lib/recompute-auction-price";
 import { prisma } from "@/lib/prisma";
 import { AdminPanel } from "./admin-panel";
@@ -27,6 +28,18 @@ export default async function SpravaPage({
     bidCount: number;
   }[] = [];
 
+  let winners: {
+    id: string;
+    title: string;
+    currentPrice: number;
+    display: string;
+    source: "override" | "bid" | "none";
+    overrideFirstName: string;
+    overrideLastName: string;
+    defaultFirstName: string;
+    defaultLastName: string;
+  }[] = [];
+
   let bids: {
     id: string;
     amount: number;
@@ -41,7 +54,13 @@ export default async function SpravaPage({
     const [rows, bidRows] = await Promise.all([
       prisma.auction.findMany({
         orderBy: { createdAt: "desc" },
-        include: { _count: { select: { bids: true } } },
+        include: {
+          _count: { select: { bids: true } },
+          bids: {
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            select: { bidderId: true },
+          },
+        },
         take: 200,
       }),
       prisma.bid.findMany({
@@ -63,6 +82,30 @@ export default async function SpravaPage({
       endsAt: a.endsAt.toISOString(),
       bidCount: a._count.bids,
     }));
+
+    winners = rows.map((a) => {
+      const effective = resolveAuctionWinner({
+        winnerFirstName: a.winnerFirstName,
+        winnerLastName: a.winnerLastName,
+        bidsAsc: a.bids,
+      });
+      const fromBid = resolveAuctionWinner({
+        winnerFirstName: null,
+        winnerLastName: null,
+        bidsAsc: a.bids,
+      });
+      return {
+        id: a.id,
+        title: a.title,
+        currentPrice: a.currentPrice,
+        display: effective.display,
+        source: effective.source,
+        overrideFirstName: a.winnerFirstName ?? "",
+        overrideLastName: a.winnerLastName ?? "",
+        defaultFirstName: fromBid.firstName,
+        defaultLastName: fromBid.lastName,
+      };
+    });
 
     const auctionIds = Array.from(new Set(bidRows.map((b) => b.auctionId)));
     const startingByAuction = new Map(
@@ -91,7 +134,8 @@ export default async function SpravaPage({
     bids = bidRows.map((b) => ({
       id: b.id,
       amount: b.amount,
-      resultingPrice: resultingByBidId.get(b.id) ?? b.auction.startingPrice + b.amount,
+      resultingPrice:
+        resultingByBidId.get(b.id) ?? b.auction.startingPrice + b.amount,
       bidderId: b.bidderId,
       createdAt: b.createdAt.toISOString(),
       auctionId: b.auction.id,
@@ -119,7 +163,12 @@ export default async function SpravaPage({
           </p>
         )}
         {loggedIn ? (
-          <AdminPanel auctions={auctions} bids={bids} saved={saved} />
+          <AdminPanel
+            auctions={auctions}
+            winners={winners}
+            bids={bids}
+            saved={saved}
+          />
         ) : (
           <AdminLoginForm configured={configured} />
         )}

@@ -13,6 +13,18 @@ type Row = {
   bidCount: number;
 };
 
+type WinnerRow = {
+  id: string;
+  title: string;
+  currentPrice: number;
+  display: string;
+  source: "override" | "bid" | "none";
+  overrideFirstName: string;
+  overrideLastName: string;
+  defaultFirstName: string;
+  defaultLastName: string;
+};
+
 type BidLogRow = {
   id: string;
   amount: number;
@@ -32,10 +44,12 @@ const money = (n: number) =>
 
 export function AdminPanel({
   auctions,
+  winners,
   bids,
   saved,
 }: {
   auctions: Row[];
+  winners: WinnerRow[];
   bids: BidLogRow[];
   saved?: boolean;
 }) {
@@ -44,12 +58,26 @@ export function AdminPanel({
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [draftRaises, setDraftRaises] = useState<Record<string, string>>({});
+  const [draftWinners, setDraftWinners] = useState<
+    Record<string, { firstName: string; lastName: string }>
+  >({});
 
   useEffect(() => {
     const next: Record<string, string> = {};
     for (const b of bids) next[b.id] = String(b.amount);
     setDraftRaises(next);
   }, [bids]);
+
+  useEffect(() => {
+    const next: Record<string, { firstName: string; lastName: string }> = {};
+    for (const w of winners) {
+      next[w.id] = {
+        firstName: w.overrideFirstName,
+        lastName: w.overrideLastName,
+      };
+    }
+    setDraftWinners(next);
+  }, [winners]);
 
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -125,6 +153,44 @@ export function AdminPanel({
     }
   }
 
+  async function saveWinner(row: WinnerRow) {
+    setError(null);
+    setOkMsg(null);
+    const draft = draftWinners[row.id] ?? {
+      firstName: "",
+      lastName: "",
+    };
+    const firstName = draft.firstName.trim();
+    const lastName = draft.lastName.trim();
+    setPendingId(`winner-${row.id}`);
+    try {
+      const res = await fetch(`/api/admin/auctions/${row.id}/winner`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ firstName, lastName }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : "Uložení vítěze selhalo.",
+        );
+        return;
+      }
+      setOkMsg(
+        data.cleared
+          ? `Vítěz u „${row.title}“ vymazán — platí nejvyšší příhoz (nebo bez vítěze).`
+          : `Vítěz u „${row.title}“ uložen.`,
+      );
+      router.refresh();
+    } catch {
+      setError("Síťová chyba při ukládání vítěze.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   return (
     <div className="admin-panel">
       <div className="admin-toolbar">
@@ -179,6 +245,91 @@ export function AdminPanel({
               </div>
             </li>
           ))}
+        </ul>
+      )}
+
+      <h2 className="admin-section-title">Vítězové</h2>
+      <p className="bid-hint">
+        Výchozí vítěz je nejvyšší příhoz (podle přepočtené ceny). Uložte jméno a
+        příjmení pro záznam; prázdné uložení zruší úpravu a vrátí výchozí.
+      </p>
+      {winners.length === 0 ? (
+        <p>Žádné aukce.</p>
+      ) : (
+        <ul className="admin-winner-list">
+          {winners.map((w) => {
+            const draft = draftWinners[w.id] ?? {
+              firstName: "",
+              lastName: "",
+            };
+            const defaultLabel =
+              w.defaultFirstName || w.defaultLastName
+                ? `${w.defaultFirstName} ${w.defaultLastName}`.trim()
+                : "bez vítěze";
+            const sourceLabel =
+              w.source === "override"
+                ? "uložený záznam"
+                : w.source === "bid"
+                  ? "nejvyšší příhoz"
+                  : "bez vítěze";
+            return (
+              <li key={w.id}>
+                <div className="admin-list-main">
+                  <strong>{w.title}</strong>
+                  <span>
+                    {money(w.currentPrice)} · vítěz: {w.display} ({sourceLabel})
+                  </span>
+                  <span className="bid-hint">
+                    Výchozí (nejvyšší příhoz): {defaultLabel}
+                  </span>
+                </div>
+                <div className="admin-winner-fields">
+                  <label>
+                    Jméno
+                    <input
+                      value={draft.firstName}
+                      maxLength={40}
+                      disabled={pendingId === `winner-${w.id}`}
+                      onChange={(e) =>
+                        setDraftWinners((prev) => ({
+                          ...prev,
+                          [w.id]: {
+                            firstName: e.target.value,
+                            lastName: prev[w.id]?.lastName ?? "",
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Příjmení
+                    <input
+                      value={draft.lastName}
+                      maxLength={40}
+                      disabled={pendingId === `winner-${w.id}`}
+                      onChange={(e) =>
+                        setDraftWinners((prev) => ({
+                          ...prev,
+                          [w.id]: {
+                            firstName: prev[w.id]?.firstName ?? "",
+                            lastName: e.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    disabled={pendingId === `winner-${w.id}`}
+                    onClick={() => saveWinner(w)}
+                  >
+                    {pendingId === `winner-${w.id}` ? "Ukládám…" : "Uložit vítěze"}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
