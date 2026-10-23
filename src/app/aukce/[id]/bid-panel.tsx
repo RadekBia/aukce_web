@@ -29,10 +29,12 @@ const FORM_ID = "aukce-bid-form";
 type BidCtx = {
   auctionId: string;
   canBid: boolean;
-  signedIn: boolean;
-  accountLabel: string | null;
   price: number;
   startingPrice: number;
+  firstName: string;
+  setFirstName: (v: string) => void;
+  lastName: string;
+  setLastName: (v: string) => void;
   amount: string;
   setAmount: (v: string) => void;
   bids: BidRow[];
@@ -55,8 +57,6 @@ export function BidProvider({
   currentPrice,
   startingPrice,
   canBid,
-  signedIn,
-  accountLabel,
   initialBids,
   children,
 }: {
@@ -64,12 +64,12 @@ export function BidProvider({
   currentPrice: number;
   startingPrice: number;
   canBid: boolean;
-  signedIn: boolean;
-  accountLabel: string | null;
   initialBids: BidRow[];
   children: ReactNode;
 }) {
   const router = useRouter();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [amount, setAmount] = useState(String(currentPrice + 10));
   const [price, setPrice] = useState(currentPrice);
   const [bids, setBids] = useState(initialBids);
@@ -87,8 +87,10 @@ export function BidProvider({
     e.preventDefault();
     setError(null);
     setOk(null);
-    if (!signedIn) {
-      setError("Pro přihazování se přihlaste přes Google.");
+    const fn = firstName.trim();
+    const ln = lastName.trim();
+    if (fn.length < 1 || ln.length < 1) {
+      setError("Zadejte jméno i příjmení.");
       return;
     }
     const amountNum = Number(amount);
@@ -111,7 +113,11 @@ export function BidProvider({
       const res = await fetch(`/api/auctions/${auctionId}/bids`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ amount: amountNum }),
+        body: JSON.stringify({
+          firstName: fn,
+          lastName: ln,
+          amount: amountNum,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -139,10 +145,12 @@ export function BidProvider({
       value={{
         auctionId,
         canBid,
-        signedIn,
-        accountLabel,
         price,
         startingPrice,
+        firstName,
+        setFirstName,
+        lastName,
+        setLastName,
         amount,
         setAmount,
         bids,
@@ -159,8 +167,7 @@ export function BidProvider({
 
 /** Current + starting price; Přihodit sits on the same row as current price. */
 export function BidPriceRow() {
-  const { canBid, signedIn, price, startingPrice, pending } = useBidCtx();
-  const showBidButton = canBid && signedIn;
+  const { canBid, price, startingPrice, pending } = useBidCtx();
 
   return (
     <div className="detail-prices detail-prices-with-bid">
@@ -168,7 +175,7 @@ export function BidPriceRow() {
         <small>Aktuální cena</small>
         <div className="detail-price-current-row">
           <strong className="price-lg">{money(price)}</strong>
-          {showBidButton && (
+          {canBid && (
             <button
               className="btn"
               type="submit"
@@ -188,13 +195,15 @@ export function BidPriceRow() {
   );
 }
 
-/** Amount field (and messages) on the right; identity from Google session. */
+/** Jméno, příjmení, částka — submit via price-row button. */
 export function BidFields() {
   const {
     canBid,
-    signedIn,
-    accountLabel,
     price,
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
     amount,
     setAmount,
     error,
@@ -206,21 +215,33 @@ export function BidFields() {
     return <p className="notice">Do této aukce už nelze přihazovat.</p>;
   }
 
-  if (!signedIn) {
-    return (
-      <p className="notice bid-warn">
-        Pro přihazování se přihlaste přes Google (tlačítko{" "}
-        <strong>Přihlásit se přes Google</strong> v záhlaví).
-      </p>
-    );
-  }
-
   return (
     <form id={FORM_ID} className="bid-form" onSubmit={onSubmit}>
       <h2>Přihodit</h2>
-      <p className="bid-hint">
-        Přihazujete jako <strong>{accountLabel ?? "Google účet"}</strong>.
-      </p>
+      <label>
+        Jméno
+        <input
+          name="firstName"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+          minLength={1}
+          maxLength={40}
+          autoComplete="given-name"
+        />
+      </label>
+      <label>
+        Příjmení
+        <input
+          name="lastName"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+          minLength={1}
+          maxLength={40}
+          autoComplete="family-name"
+        />
+      </label>
       <label>
         Částka (Kč)
         <input
@@ -240,7 +261,7 @@ export function BidFields() {
   );
 }
 
-/** Bid history — intended for the left column under the gallery. */
+/** Bid history — under the gallery. */
 export function BidList() {
   const { bids } = useBidCtx();
 

@@ -44,8 +44,7 @@ export function AdminLoginForm({ configured }: { configured: boolean }) {
   return (
     <form className="create-form" onSubmit={onSubmit}>
       <p className="notice bid-warn">
-        Dočasná správa do Google SSO. Heslo je hodnota{" "}
-        <code>ADMIN_SECRET</code> z Vercelu — nikdy ji necommitujte do gitu.
+        Heslo je hodnota <code>ADMIN_SECRET</code> z Vercelu.
       </p>
       {!configured && (
         <p className="bid-error">

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import {
   compressAuctionImage,
   IMAGE_MAX_STORED_BYTES,
@@ -17,15 +16,13 @@ const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /** Store one image in Neon (bytea). Prefer browser-precompressed WebP/JPEG. */
 export async function POST(req: Request) {
-  const session = await auth();
-  const allowAnon = isUnauthenticatedAuctionCreationEnabled();
-  if (!session?.user && !allowAnon) {
+  if (!isUnauthenticatedAuctionCreationEnabled()) {
     return NextResponse.json(
       {
         error:
-          "Pro nahrání fotek se přihlaste přes Google (tlačítko v záhlaví).",
+          "Nahrávání fotek je vypnuté (ENABLE_UNAUTHENTICATED_AUCTION_CREATION=false).",
       },
-      { status: 401 },
+      { status: 403 },
     );
   }
 

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth, bidderIdFromSession } from "@/auth";
 import { SiteHeader } from "@/components/site-header";
-import { isAuthConfigured } from "@/lib/auth-env";
 import { auctionImageList } from "@/lib/auction-images";
 import { prisma } from "@/lib/prisma";
 import {
@@ -48,13 +46,6 @@ export default async function AuctionDetail({
   }
   if (!auction) notFound();
 
-  const session = isAuthConfigured() ? await auth() : null;
-  const accountLabel =
-    session?.user?.name?.trim() ||
-    session?.user?.email?.trim() ||
-    (session ? bidderIdFromSession(session) : null);
-  const signedIn = Boolean(session?.user && accountLabel);
-
   const ended = auction.endsAt.getTime() <= Date.now();
   const canBid = auction.status === "ACTIVE" && !ended;
   const endsLabel = auction.endsAt.toLocaleString("cs-CZ", {
@@ -85,8 +76,6 @@ export default async function AuctionDetail({
         currentPrice={auction.currentPrice}
         startingPrice={auction.startingPrice}
         canBid={canBid}
-        signedIn={signedIn}
-        accountLabel={accountLabel}
         initialBids={initialBids}
       >
         <section className="detail">
