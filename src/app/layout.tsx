@@ -1,1 +1,19 @@
-import type { Metadata } from "next"; import "./globals.css"; export const metadata: Metadata = { title: "Aukceee na dobrou Věc", description: "Jednoduché aukce použitých věcí." }; export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="cs"><body>{children}</body></html>; }
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Aukceee na dobrou věc",
+  description: "Jednoduché aukce použitých věcí.",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="cs">
+      <body>{children}</body>
+    </html>
+  );
+}

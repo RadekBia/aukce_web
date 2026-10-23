@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { storedImagePath } from "@/lib/auction-images";
+import {
+  AUCTION_ENDS_AT,
+  AUCTION_STARTING_PRICE,
+} from "@/lib/auction-rules";
 import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
 import { prisma } from "@/lib/prisma";
 
@@ -12,13 +16,13 @@ const schema = z.object({
   description: z.string().trim().min(10).max(10000),
   category: z.string().min(2).max(60),
   condition: z.string().min(2).max(40),
+  sellerFirstName: z.string().trim().min(1).max(40),
+  sellerLastName: z.string().trim().min(1).max(40),
   /** External pasted URL fallback (not stored as bytea). */
   imageUrl: z.string().url().optional().or(z.literal("")),
   imageUrls: z.array(z.string().url()).max(5).optional(),
   /** Neon-stored photo ids from POST /api/uploads. */
   imageIds: z.array(z.string().min(1)).max(5).optional(),
-  startingPrice: z.number().int().positive(),
-  durationHours: z.number().int().min(1).max(720),
 });
 
 export async function GET() {
@@ -86,11 +90,13 @@ export async function POST(req: Request) {
         description: d.description,
         category: d.category,
         condition: d.condition,
+        sellerFirstName: d.sellerFirstName,
+        sellerLastName: d.sellerLastName,
         imageUrl: displayUrls[0] ?? null,
         imageUrls: displayUrls,
-        startingPrice: d.startingPrice,
-        currentPrice: d.startingPrice,
-        endsAt: new Date(Date.now() + d.durationHours * 3600000),
+        startingPrice: AUCTION_STARTING_PRICE,
+        currentPrice: AUCTION_STARTING_PRICE,
+        endsAt: AUCTION_ENDS_AT,
       },
     });
 

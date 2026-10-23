@@ -131,8 +131,7 @@ export function AdminPanel({
 
       <h2 className="admin-section-title">Protokol příhozů</h2>
       <p className="bid-hint">
-        Nejnovější příhozy napříč všemi aukcemi (čas, aukce, přihazující,
-        částka).
+        Nejnovější příhozy (čas, aukce, přihazující, navýšení).
       </p>
       {bids.length === 0 ? (
         <p>Zatím žádné příhozy.</p>
@@ -148,7 +147,7 @@ export function AdminPanel({
               </time>
               <Link href={`/aukce/${b.auctionId}`}>{b.auctionTitle}</Link>
               <span className="admin-bid-bidder">{b.bidderId}</span>
-              <strong>{money(b.amount)}</strong>
+              <strong>+{money(b.amount)}</strong>
             </li>
           ))}
         </ul>

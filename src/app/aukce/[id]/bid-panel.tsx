@@ -9,10 +9,12 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { MIN_BID_RAISE } from "@/lib/auction-rules";
 
 type BidRow = {
   id: string;
   bidderId: string;
+  /** Raise amount in Kč (navýšení), not the new total. */
   amount: number;
   createdAt: string | Date;
 };
@@ -36,8 +38,8 @@ type BidCtx = {
   setFirstName: (v: string) => void;
   lastName: string;
   setLastName: (v: string) => void;
-  amount: string;
-  setAmount: (v: string) => void;
+  raise: string;
+  setRaise: (v: string) => void;
   bids: BidRow[];
   error: string | null;
   ok: string | null;
@@ -57,7 +59,6 @@ export function BidProvider({
   auctionId,
   currentPrice,
   startingPrice,
-  /** Status allows bidding (e.g. ACTIVE); time is checked live via endsAt. */
   statusAllowsBid,
   endsAt,
   initialBids,
@@ -76,7 +77,7 @@ export function BidProvider({
   const [now, setNow] = useState(() => Date.now());
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [amount, setAmount] = useState(String(currentPrice + 10));
+  const [raise, setRaise] = useState(String(MIN_BID_RAISE));
   const [price, setPrice] = useState(currentPrice);
   const [bids, setBids] = useState(initialBids);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export function BidProvider({
 
   useEffect(() => {
     setPrice(currentPrice);
-    setAmount(String(currentPrice + 10));
+    setRaise(String(MIN_BID_RAISE));
     setBids(initialBids);
   }, [currentPrice, initialBids, auctionId]);
 
@@ -107,15 +108,9 @@ export function BidProvider({
       setError("Zadejte jméno i příjmení.");
       return;
     }
-    const amountNum = Number(amount);
-    if (!Number.isInteger(amountNum) || amountNum <= 0) {
-      setError("Částka musí být celé kladné číslo v Kč.");
-      return;
-    }
-    if (amountNum <= price) {
-      setError(
-        `Příhoz musí být vyšší než aktuální cena (${money(price)}).`,
-      );
+    const raiseNum = Number(raise);
+    if (!Number.isInteger(raiseNum) || raiseNum < MIN_BID_RAISE) {
+      setError(`Navýšení musí být celé číslo alespoň ${MIN_BID_RAISE} Kč.`);
       return;
     }
     if (Date.now() >= endsAtMs) {
@@ -135,7 +130,7 @@ export function BidProvider({
         body: JSON.stringify({
           firstName: fn,
           lastName: ln,
-          amount: amountNum,
+          raise: raiseNum,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -148,9 +143,11 @@ export function BidProvider({
         return;
       }
       setPrice(data.auction.currentPrice);
-      setAmount(String(data.auction.currentPrice + 10));
+      setRaise(String(MIN_BID_RAISE));
       setBids((prev) => [data.bid, ...prev.filter((b) => b.id !== data.bid.id)]);
-      setOk(`Příhoz ${money(amountNum)} uložen.`);
+      setOk(
+        `Navýšení ${money(raiseNum)} uloženo. Nová cena ${money(data.auction.currentPrice)}.`,
+      );
       router.refresh();
     } catch {
       setError("Síťová chyba při odesílání příhozu.");
@@ -171,8 +168,8 @@ export function BidProvider({
         setFirstName,
         lastName,
         setLastName,
-        amount,
-        setAmount,
+        raise,
+        setRaise,
         bids,
         error,
         ok,
@@ -185,7 +182,6 @@ export function BidProvider({
   );
 }
 
-/** Current + starting price; Přihodit sits on the same row as current price. */
 export function BidPriceRow() {
   const { canBid, price, startingPrice, pending } = useBidCtx();
 
@@ -215,7 +211,6 @@ export function BidPriceRow() {
   );
 }
 
-/** Jméno, příjmení, částka — submit via price-row button. */
 export function BidFields() {
   const {
     canBid,
@@ -225,8 +220,8 @@ export function BidFields() {
     setFirstName,
     lastName,
     setLastName,
-    amount,
-    setAmount,
+    raise,
+    setRaise,
     error,
     ok,
     onSubmit,
@@ -241,6 +236,12 @@ export function BidFields() {
       </p>
     );
   }
+
+  const raiseNum = Number(raise);
+  const preview =
+    Number.isInteger(raiseNum) && raiseNum >= MIN_BID_RAISE
+      ? price + raiseNum
+      : null;
 
   return (
     <form id={FORM_ID} className="bid-form" onSubmit={onSubmit}>
@@ -270,25 +271,29 @@ export function BidFields() {
         />
       </label>
       <label>
-        Částka (Kč)
+        Navýšení (Kč)
         <input
-          name="amount"
+          name="raise"
           type="number"
           inputMode="numeric"
-          min={price + 1}
+          min={MIN_BID_RAISE}
           step={1}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          value={raise}
+          onChange={(e) => setRaise(e.target.value)}
           required
         />
       </label>
+      {preview !== null && (
+        <p className="bid-hint">
+          Nová cena po příhozu: <strong>{money(preview)}</strong>
+        </p>
+      )}
       {error && <p className="bid-error">{error}</p>}
       {ok && <p className="bid-ok">{ok}</p>}
     </form>
   );
 }
 
-/** Bid history — under the gallery. */
 export function BidList() {
   const { bids } = useBidCtx();
 
@@ -302,7 +307,7 @@ export function BidList() {
           {bids.map((b) => (
             <li key={b.id}>
               <span>{b.bidderId}</span>
-              <strong>{money(b.amount)}</strong>
+              <strong>+{money(b.amount)}</strong>
               <time dateTime={String(b.createdAt)}>
                 {new Date(b.createdAt).toLocaleString("cs-CZ", {
                   dateStyle: "short",

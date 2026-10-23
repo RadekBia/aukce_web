@@ -15,9 +15,12 @@ const updateSchema = z.object({
   description: z.string().trim().min(10).max(10000),
   category: z.string().trim().min(2).max(60),
   condition: z.string().trim().min(2).max(40),
+  sellerFirstName: z.string().trim().min(1).max(40).optional(),
+  sellerLastName: z.string().trim().min(1).max(40).optional(),
   endsAt: z.string().datetime({ offset: true }).or(z.string().min(1)),
   status: z.enum(STATUSES),
-  startingPrice: z.number().int().positive().optional(),
+  startingPrice: z.number().int().positive(),
+  currentPrice: z.number().int().positive(),
 });
 
 async function requireAdmin() {
@@ -58,54 +61,29 @@ export async function PATCH(req: Request, ctx: Ctx) {
     );
   }
 
-  const existing = await prisma.auction.findUnique({
-    where: { id },
-    include: { _count: { select: { bids: true } } },
-  });
+  const existing = await prisma.auction.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ error: "Aukce nenalezena." }, { status: 404 });
   }
 
-  const hasBids = existing._count.bids > 0;
-  if (hasBids && d.startingPrice !== undefined) {
-    if (d.startingPrice !== existing.startingPrice) {
-      return NextResponse.json(
-        {
-          error:
-            "Vyvolávací cenu nelze měnit, protože aukce už má příhozy. Aktuální cena zůstává.",
-        },
-        { status: 400 },
-      );
-    }
-  }
-
-  const data: {
-    title: string;
-    description: string;
-    category: string;
-    condition: string;
-    endsAt: Date;
-    status: (typeof STATUSES)[number];
-    startingPrice?: number;
-    currentPrice?: number;
-  } = {
-    title: d.title,
-    description: d.description,
-    category: d.category,
-    condition: d.condition,
-    endsAt,
-    status: d.status,
-  };
-
-  if (!hasBids && d.startingPrice !== undefined) {
-    data.startingPrice = d.startingPrice;
-    // No bids yet — keep currentPrice in sync with starting price.
-    data.currentPrice = d.startingPrice;
-  }
-
   const auction = await prisma.auction.update({
     where: { id },
-    data,
+    data: {
+      title: d.title,
+      description: d.description,
+      category: d.category,
+      condition: d.condition,
+      endsAt,
+      status: d.status,
+      startingPrice: d.startingPrice,
+      currentPrice: d.currentPrice,
+      ...(d.sellerFirstName !== undefined
+        ? { sellerFirstName: d.sellerFirstName }
+        : {}),
+      ...(d.sellerLastName !== undefined
+        ? { sellerLastName: d.sellerLastName }
+        : {}),
+    },
     include: { _count: { select: { bids: true } } },
   });
 
