@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Row = {
   id: string;
@@ -16,6 +16,7 @@ type Row = {
 type BidLogRow = {
   id: string;
   amount: number;
+  resultingPrice: number;
   bidderId: string;
   createdAt: string;
   auctionId: string;
@@ -40,7 +41,15 @@ export function AdminPanel({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [draftRaises, setDraftRaises] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const b of bids) next[b.id] = String(b.amount);
+    setDraftRaises(next);
+  }, [bids]);
 
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -53,6 +62,7 @@ export function AdminPanel({
     );
     if (!ok) return;
     setError(null);
+    setOkMsg(null);
     setPendingId(row.id);
     try {
       const res = await fetch(`/api/admin/auctions/${row.id}`, {
@@ -73,6 +83,48 @@ export function AdminPanel({
     }
   }
 
+  async function saveBidRaise(row: BidLogRow) {
+    setError(null);
+    setOkMsg(null);
+    const raw = (draftRaises[row.id] ?? "").trim();
+    if (raw === "") {
+      setError("Navýšení nesmí být prázdné.");
+      return;
+    }
+    const amount = Number(raw);
+    if (!Number.isInteger(amount) || amount < 1) {
+      setError(
+        "Navýšení musí být celé číslo alespoň 1 Kč (ne nula ani záporné).",
+      );
+      return;
+    }
+    setPendingId(row.id);
+    try {
+      const res = await fetch(`/api/admin/bids/${row.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : "Uložení příhozu selhalo.",
+        );
+        return;
+      }
+      setOkMsg(
+        `Navýšení uloženo (+${money(amount)}). Aktuální cena aukce: ${money(data.auction.currentPrice)}.`,
+      );
+      router.refresh();
+    } catch {
+      setError("Síťová chyba při ukládání příhozu.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   return (
     <div className="admin-panel">
       <div className="admin-toolbar">
@@ -88,6 +140,7 @@ export function AdminPanel({
       {saved && (
         <p className="bid-ok">Aukce byla úspěšně uložena.</p>
       )}
+      {okMsg && <p className="bid-ok">{okMsg}</p>}
       {error && <p className="bid-error">{error}</p>}
 
       <h2 className="admin-section-title">Aukce</h2>
@@ -131,25 +184,67 @@ export function AdminPanel({
 
       <h2 className="admin-section-title">Protokol příhozů</h2>
       <p className="bid-hint">
-        Nejnovější příhozy (čas, aukce, přihazující, navýšení).
+        Upravte navýšení (Kč, celé číslo ≥ 1). Po uložení se přepočítá běžící
+        součet a aktuální cena aukce (vyvolávací + příhozy v čase). Veřejné
+        minimum 10 Kč zde neplatí.
       </p>
       {bids.length === 0 ? (
         <p>Zatím žádné příhozy.</p>
       ) : (
         <ul className="admin-bid-log">
-          {bids.map((b) => (
-            <li key={b.id}>
-              <time dateTime={b.createdAt}>
-                {new Date(b.createdAt).toLocaleString("cs-CZ", {
-                  dateStyle: "short",
-                  timeStyle: "medium",
-                })}
-              </time>
-              <Link href={`/aukce/${b.auctionId}`}>{b.auctionTitle}</Link>
-              <span className="admin-bid-bidder">{b.bidderId}</span>
-              <strong>+{money(b.amount)}</strong>
-            </li>
-          ))}
+          {bids.map((b) => {
+            const draft = draftRaises[b.id] ?? String(b.amount);
+            const draftNum = Number(draft);
+            const previewResult =
+              Number.isInteger(draftNum) && draftNum >= 1
+                ? b.resultingPrice - b.amount + draftNum
+                : null;
+            const dirty =
+              draft.trim() !== "" && Number(draft) !== b.amount;
+            return (
+              <li key={b.id} className="admin-bid-log-edit">
+                <time dateTime={b.createdAt}>
+                  {new Date(b.createdAt).toLocaleString("cs-CZ", {
+                    dateStyle: "short",
+                    timeStyle: "medium",
+                  })}
+                </time>
+                <Link href={`/aukce/${b.auctionId}`}>{b.auctionTitle}</Link>
+                <span className="admin-bid-bidder">{b.bidderId}</span>
+                <label className="admin-bid-raise">
+                  <span>Navýšení (Kč)</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    step={1}
+                    value={draft}
+                    disabled={pendingId === b.id}
+                    onChange={(e) =>
+                      setDraftRaises((prev) => ({
+                        ...prev,
+                        [b.id]: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <span className="admin-bid-result">
+                  →{" "}
+                  {previewResult !== null
+                    ? money(previewResult)
+                    : money(b.resultingPrice)}
+                </span>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  disabled={pendingId === b.id || !dirty}
+                  onClick={() => saveBidRaise(b)}
+                >
+                  {pendingId === b.id ? "Ukládám…" : "Uložit"}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
