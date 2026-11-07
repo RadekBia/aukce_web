@@ -39,6 +39,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DATABASE_URL` | yes | Pooled Postgres URL (Neon pooled / local) |
 | `DIRECT_URL` | yes | Direct Postgres URL for migrations (Neon direct; locally = `DATABASE_URL`) |
 | `ENABLE_UNAUTHENTICATED_AUCTION_CREATION` | no | Default **ON** (`src/lib/flags.ts`). Set `false` to lock create. |
+| `CISELNIKY_EMAIL` | no | Login for `/ciselniky`. Default `robinpfeiffer91@gmail.com`. |
+| `CISELNIKY_PASSWORD` | no | Optional password override on Vercel. If unset, the built-in fallback login is used. |
 | (photos) | — | Stored in Neon (`AuctionImage` bytea), served at `/api/images/[id]`. No Blob token. |
 
 ### Neon + Vercel
@@ -48,6 +50,7 @@ Open [http://localhost:3000](http://localhost:3000).
 3. Deploy from this PR branch / after merge. Build runs migrate deploy once per deploy.
 4. Optional seed from laptop: `DATABASE_URL=… DIRECT_URL=… npm run db:seed`
 5. Smoke: `/`, `/api/auctions`, `/aukce/nova` (create stays off in prod unless you intentionally set the flag on Preview).
+6. Číselníky: `/ciselniky`. Import this GitHub repo in Vercel as a Next.js project. Optional: set `CISELNIKY_EMAIL` / `CISELNIKY_PASSWORD` in Vercel → Environment Variables (Production + Preview). Without them the built-in login still works.
 
 Full runbook: project store `docs/aukce-setup.md`.
 

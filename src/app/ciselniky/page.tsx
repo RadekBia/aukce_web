@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
-import { CiselnikyBoard } from "./ciselniky-board";
+import { CiselnikyApp } from "./ciselniky-board";
+import { isCiselnikySession } from "@/lib/ciselniky-auth";
 
 export const metadata: Metadata = {
   title: "Číselníky",
-  description: "Zboží, umístění a účet. Položky číselníku si doplníte sami.",
+  description: "Jaké zboží je na jakém umístění a na jakém účtu.",
 };
 
-export default function CiselnikyPage() {
-  return <CiselnikyBoard />;
+export const dynamic = "force-dynamic";
+
+export default async function CiselnikyPage() {
+  const signedIn = await isCiselnikySession();
+  return <CiselnikyApp signedIn={signedIn} />;
 }

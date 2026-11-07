@@ -3,257 +3,305 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type ColumnKey = "zbozi" | "umisteni" | "ucet";
+type CatalogKey = "zbozi" | "umisteni" | "ucet";
 
-type Entry = {
+type Catalog = Record<CatalogKey, string[]>;
+
+type Assignment = {
   id: string;
-  code: string;
-  name: string;
+  zbozi: string;
+  umisteni: string;
+  ucet: string;
   note: string;
 };
 
-type Lists = Record<ColumnKey, Entry[]>;
+type Store = {
+  catalog: Catalog;
+  rows: Assignment[];
+};
 
-const STORAGE_KEY = "aukce.ciselniky.v1";
+const STORAGE_KEY = "aukce.ciselniky.v2";
 
-const COLUMNS: {
-  key: ColumnKey;
-  title: string;
-  hint: string;
-  placeholder: string;
-}[] = [
-  {
-    key: "zbozi",
-    title: "Zboží",
-    hint: "Výrobky, materiál a služby, které vedete.",
-    placeholder: "Nové zboží",
+const CATALOG_LABEL: Record<CatalogKey, string> = {
+  zbozi: "Zboží",
+  umisteni: "Umístění",
+  ucet: "Účet",
+};
+
+const SEED: Store = {
+  catalog: {
+    zbozi: ["Roleta den a noc", "Horizontální žaluzie", "Plisé", "Síť proti hmyzu"],
+    umisteni: ["Sklad Ostrava", "Sklad Praha", "Montážní vůz 1", "Showroom"],
+    ucet: ["Pokladna", "Banka Fio", "Zálohy zákazníků", "Hotovost u technika"],
   },
-  {
-    key: "umisteni",
-    title: "Umístění",
-    hint: "Sklad, vůz, pobočka nebo jiné místo.",
-    placeholder: "Nové umístění",
-  },
-  {
-    key: "ucet",
-    title: "Účet",
-    hint: "Pokladna, banka, záloha a další účty.",
-    placeholder: "Nový účet",
-  },
-];
-
-function item(id: string, code: string, name: string, note = ""): Entry {
-  return { id, code, name, note };
-}
-
-const SEED: Lists = {
-  zbozi: [
-    item("z1", "ROL-DN", "Roleta den a noc"),
-    item("z2", "ZAL-H", "Horizontální žaluzie"),
-    item("z3", "PLISE", "Plisé"),
-    item("z4", "SIT", "Síť proti hmyzu"),
-  ],
-  umisteni: [
-    item("u1", "SKL-OVA", "Sklad Ostrava"),
-    item("u2", "SKL-PHA", "Sklad Praha"),
-    item("u3", "VUZ-1", "Montážní vůz 1"),
-    item("u4", "SHOW", "Showroom"),
-  ],
-  ucet: [
-    item("a1", "POK", "Pokladna"),
-    item("a2", "FIO", "Banka Fio"),
-    item("a3", "ZAL", "Zálohy zákazníků"),
-    item("a4", "HOT", "Hotovost u technika"),
+  rows: [
+    {
+      id: "r1",
+      zbozi: "Roleta den a noc",
+      umisteni: "Sklad Ostrava",
+      ucet: "Pokladna",
+      note: "",
+    },
+    {
+      id: "r2",
+      zbozi: "Horizontální žaluzie",
+      umisteni: "Sklad Praha",
+      ucet: "Banka Fio",
+      note: "",
+    },
+    {
+      id: "r3",
+      zbozi: "Plisé",
+      umisteni: "Showroom",
+      ucet: "Zálohy zákazníků",
+      note: "",
+    },
+    {
+      id: "r4",
+      zbozi: "Síť proti hmyzu",
+      umisteni: "Montážní vůz 1",
+      ucet: "Hotovost u technika",
+      note: "",
+    },
   ],
 };
 
-function codeFromName(name: string): string {
-  const ascii = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const slug = ascii
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 12);
-  return slug || "POL";
-}
-
-function uniqueCode(list: Entry[], base: string, ignoreId?: string): string {
-  const used = new Set(
-    list.filter((entry) => entry.id !== ignoreId).map((entry) => entry.code.toLowerCase()),
+function isCatalog(value: unknown): value is Catalog {
+  if (!value || typeof value !== "object") return false;
+  const raw = value as Record<string, unknown>;
+  return (["zbozi", "umisteni", "ucet"] as const).every(
+    (key) =>
+      Array.isArray(raw[key]) &&
+      raw[key].every((item) => typeof item === "string" && item.trim().length > 0 && item.length <= 80),
   );
-  const root = (base || "POL").slice(0, 12);
-  if (!used.has(root.toLowerCase())) return root;
-  let n = 2;
-  let next = `${root}-${n}`.slice(0, 16);
-  while (used.has(next.toLowerCase())) {
-    n += 1;
-    next = `${root}-${n}`.slice(0, 16);
-  }
-  return next;
 }
 
-function isEntry(value: unknown): value is Entry {
+function isAssignment(value: unknown): value is Assignment {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
   return (
     typeof row.id === "string" &&
     row.id.length > 0 &&
     row.id.length <= 80 &&
-    typeof row.code === "string" &&
-    row.code.length <= 16 &&
-    typeof row.name === "string" &&
-    row.name.trim().length > 0 &&
-    row.name.length <= 80 &&
+    typeof row.zbozi === "string" &&
+    row.zbozi.trim().length > 0 &&
+    row.zbozi.length <= 80 &&
+    typeof row.umisteni === "string" &&
+    row.umisteni.trim().length > 0 &&
+    row.umisteni.length <= 80 &&
+    typeof row.ucet === "string" &&
+    row.ucet.trim().length > 0 &&
+    row.ucet.length <= 80 &&
     (row.note === undefined || (typeof row.note === "string" && row.note.length <= 200))
   );
 }
 
-function parseLists(value: unknown): Lists | null {
+function parseStore(value: unknown): Store | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Record<string, unknown>;
-  const next = {} as Lists;
-  for (const column of COLUMNS) {
-    const rows = raw[column.key];
-    if (!Array.isArray(rows) || !rows.every(isEntry)) return null;
-    next[column.key] = rows.map((row) => ({
-      id: row.id,
-      code: row.code.trim(),
-      name: row.name.trim(),
-      note: (row.note ?? "").trim(),
-    }));
+  if (!isCatalog(raw.catalog) || !Array.isArray(raw.rows) || !raw.rows.every(isAssignment)) {
+    return null;
   }
-  return next;
+  const catalog: Catalog = {
+    zbozi: uniqueNames(raw.catalog.zbozi),
+    umisteni: uniqueNames(raw.catalog.umisteni),
+    ucet: uniqueNames(raw.catalog.ucet),
+  };
+  const rows = raw.rows.map((row) => ({
+    id: row.id,
+    zbozi: row.zbozi.trim(),
+    umisteni: row.umisteni.trim(),
+    ucet: row.ucet.trim(),
+    note: (row.note ?? "").trim(),
+  }));
+  for (const row of rows) {
+    catalog.zbozi = uniqueNames([...catalog.zbozi, row.zbozi]);
+    catalog.umisteni = uniqueNames([...catalog.umisteni, row.umisteni]);
+    catalog.ucet = uniqueNames([...catalog.ucet, row.ucet]);
+  }
+  return { catalog, rows };
 }
 
-function loadLists(): Lists {
+function uniqueNames(names: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const name of names) {
+    const trimmed = name.trim();
+    const key = trimmed.toLocaleLowerCase("cs");
+    if (!trimmed || seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+function loadStore(): Store {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED;
-    const parsed = parseLists(JSON.parse(raw));
-    return parsed ?? SEED;
+    return parseStore(JSON.parse(raw)) ?? SEED;
   } catch {
     return SEED;
   }
 }
 
-export function CiselnikyBoard() {
-  const [lists, setLists] = useState<Lists>(SEED);
+function withCatalog(catalog: Catalog, key: CatalogKey, name: string): Catalog {
+  return { ...catalog, [key]: uniqueNames([...catalog[key], name]) };
+}
+
+export function CiselnikyApp({ signedIn: initialSignedIn }: { signedIn: boolean }) {
+  const [signedIn, setSignedIn] = useState(initialSignedIn);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginPending, setLoginPending] = useState(false);
+
+  const [store, setStore] = useState<Store>(SEED);
   const [ready, setReady] = useState(false);
-  const [drafts, setDrafts] = useState<Record<ColumnKey, string>>({
+  const [draft, setDraft] = useState({ zbozi: "", umisteni: "", ucet: "", note: "" });
+  const [query, setQuery] = useState("");
+  const [formError, setFormError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ zbozi: "", umisteni: "", ucet: "", note: "" });
+  const [catalogDraft, setCatalogDraft] = useState<Record<CatalogKey, string>>({
     zbozi: "",
     umisteni: "",
     ucet: "",
   });
-  const [queries, setQueries] = useState<Record<ColumnKey, string>>({
-    zbozi: "",
-    umisteni: "",
-    ucet: "",
-  });
-  const [errors, setErrors] = useState<Partial<Record<ColumnKey, string>>>({});
-  const [editing, setEditing] = useState<{ column: ColumnKey; id: string } | null>(null);
-  const [editDraft, setEditDraft] = useState({ code: "", name: "", note: "" });
-  const [editError, setEditError] = useState("");
-  const [undo, setUndo] = useState<{
-    column: ColumnKey;
-    entry: Entry;
-    index: number;
-  } | null>(null);
+  const [undo, setUndo] = useState<{ row: Assignment; index: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLists(loadLists());
+    setStore(loadStore());
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
-  }, [lists, ready]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  }, [store, ready]);
 
   const visible = useMemo(() => {
-    const out = {} as Record<ColumnKey, Entry[]>;
-    for (const column of COLUMNS) {
-      const q = queries[column.key].trim().toLocaleLowerCase("cs");
-      out[column.key] = lists[column.key].filter((entry) => {
-        if (!q) return true;
-        return `${entry.code} ${entry.name} ${entry.note}`.toLocaleLowerCase("cs").includes(q);
-      });
-    }
-    return out;
-  }, [lists, queries]);
-
-  function addItem(column: ColumnKey) {
-    const name = drafts[column].trim();
-    if (!name) {
-      setErrors((prev) => ({ ...prev, [column]: "Napište název položky." }));
-      return;
-    }
-    if (name.length > 80) {
-      setErrors((prev) => ({ ...prev, [column]: "Název může mít nejvýš 80 znaků." }));
-      return;
-    }
-    const code = uniqueCode(lists[column], codeFromName(name));
-    const row: Entry = { id: crypto.randomUUID(), code, name, note: "" };
-    setLists((prev) => ({ ...prev, [column]: [row, ...prev[column]] }));
-    setDrafts((prev) => ({ ...prev, [column]: "" }));
-    setErrors((prev) => ({ ...prev, [column]: undefined }));
-  }
-
-  function startEdit(column: ColumnKey, entry: Entry) {
-    setEditing({ column, id: entry.id });
-    setEditDraft({ code: entry.code, name: entry.name, note: entry.note });
-    setEditError("");
-  }
-
-  function saveEdit() {
-    if (!editing) return;
-    const name = editDraft.name.trim();
-    const note = editDraft.note.trim();
-    const codeInput = editDraft.code.trim();
-    if (!name) {
-      setEditError("Název je povinný.");
-      return;
-    }
-    if (name.length > 80 || note.length > 200) {
-      setEditError("Název má nejvýš 80 znaků, poznámka 200.");
-      return;
-    }
-    const code = uniqueCode(
-      lists[editing.column],
-      (codeInput || codeFromName(name)).toUpperCase(),
-      editing.id,
+    const q = query.trim().toLocaleLowerCase("cs");
+    if (!q) return store.rows;
+    return store.rows.filter((row) =>
+      `${row.zbozi} ${row.umisteni} ${row.ucet} ${row.note}`.toLocaleLowerCase("cs").includes(q),
     );
-    setLists((prev) => ({
-      ...prev,
-      [editing.column]: prev[editing.column].map((entry) =>
-        entry.id === editing.id ? { ...entry, code, name, note } : entry,
-      ),
-    }));
-    setEditing(null);
+  }, [store.rows, query]);
+
+  async function login(event: React.FormEvent) {
+    event.preventDefault();
+    setLoginError("");
+    setLoginPending(true);
+    try {
+      const res = await fetch("/api/ciselniky/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLoginError(typeof data.error === "string" ? data.error : "Přihlášení selhalo.");
+        return;
+      }
+      setPassword("");
+      setSignedIn(true);
+    } catch {
+      setLoginError("Síťová chyba při přihlášení.");
+    } finally {
+      setLoginPending(false);
+    }
   }
 
-  function removeItem(column: ColumnKey, entry: Entry) {
-    const index = lists[column].findIndex((row) => row.id === entry.id);
-    setLists((prev) => ({
-      ...prev,
-      [column]: prev[column].filter((row) => row.id !== entry.id),
+  async function logout() {
+    await fetch("/api/ciselniky/logout", { method: "POST" });
+    setSignedIn(false);
+    setEmail("");
+    setPassword("");
+  }
+
+  function addRow(event: React.FormEvent) {
+    event.preventDefault();
+    const zbozi = draft.zbozi.trim();
+    const umisteni = draft.umisteni.trim();
+    const ucet = draft.ucet.trim();
+    const note = draft.note.trim();
+    if (!zbozi || !umisteni || !ucet) {
+      setFormError("Vyplňte zboží, umístění i účet. Nový název se sám přidá do číselníku.");
+      return;
+    }
+    const row: Assignment = { id: crypto.randomUUID(), zbozi, umisteni, ucet, note };
+    setStore((prev) => ({
+      catalog: {
+        zbozi: uniqueNames([...prev.catalog.zbozi, zbozi]),
+        umisteni: uniqueNames([...prev.catalog.umisteni, umisteni]),
+        ucet: uniqueNames([...prev.catalog.ucet, ucet]),
+      },
+      rows: [row, ...prev.rows],
     }));
-    if (editing?.id === entry.id) setEditing(null);
-    setUndo({ column, entry, index: Math.max(index, 0) });
+    setDraft({ zbozi: "", umisteni: "", ucet: "", note: "" });
+    setFormError("");
+  }
+
+  function startEdit(row: Assignment) {
+    setEditingId(row.id);
+    setEditDraft({ zbozi: row.zbozi, umisteni: row.umisteni, ucet: row.ucet, note: row.note });
+    setFormError("");
+  }
+
+  function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingId) return;
+    const zbozi = editDraft.zbozi.trim();
+    const umisteni = editDraft.umisteni.trim();
+    const ucet = editDraft.ucet.trim();
+    const note = editDraft.note.trim();
+    if (!zbozi || !umisteni || !ucet) {
+      setFormError("U úpravy vyplňte zboží, umístění i účet.");
+      return;
+    }
+    const next: Assignment = { id: editingId, zbozi, umisteni, ucet, note };
+    setStore((prev) => ({
+      catalog: {
+        zbozi: uniqueNames([...prev.catalog.zbozi, zbozi]),
+        umisteni: uniqueNames([...prev.catalog.umisteni, umisteni]),
+        ucet: uniqueNames([...prev.catalog.ucet, ucet]),
+      },
+      rows: prev.rows.map((row) => (row.id === editingId ? next : row)),
+    }));
+    setEditingId(null);
+    setFormError("");
+  }
+
+  function removeRow(row: Assignment) {
+    const index = store.rows.findIndex((item) => item.id === row.id);
+    setStore((prev) => ({
+      ...prev,
+      rows: prev.rows.filter((item) => item.id !== row.id),
+    }));
+    if (editingId === row.id) setEditingId(null);
+    setUndo({ row, index: Math.max(index, 0) });
   }
 
   function restoreUndo() {
     if (!undo) return;
-    setLists((prev) => {
-      const rows = [...prev[undo.column]];
-      rows.splice(Math.min(undo.index, rows.length), 0, undo.entry);
-      return { ...prev, [undo.column]: rows };
+    setStore((prev) => {
+      const rows = [...prev.rows];
+      rows.splice(Math.min(undo.index, rows.length), 0, undo.row);
+      return { ...prev, rows };
     });
     setUndo(null);
   }
 
-  function exportLists() {
-    const blob = new Blob([JSON.stringify(lists, null, 2)], { type: "application/json" });
+  function addCatalogName(key: CatalogKey) {
+    const name = catalogDraft[key].trim();
+    if (!name) return;
+    setStore((prev) => ({ ...prev, catalog: withCatalog(prev.catalog, key, name) }));
+    setCatalogDraft((prev) => ({ ...prev, [key]: "" }));
+  }
+
+  function exportStore() {
+    const blob = new Blob([JSON.stringify(store, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -262,20 +310,67 @@ export function CiselnikyBoard() {
     URL.revokeObjectURL(url);
   }
 
-  async function importLists(file: File) {
+  async function importStore(file: File) {
     try {
-      const parsed = parseLists(JSON.parse(await file.text()));
+      const parsed = parseStore(JSON.parse(await file.text()));
       if (!parsed) {
-        setEditError("");
-        window.alert("Soubor neobsahuje platné číselníky zboží, umístění a účtu.");
+        window.alert("Soubor musí obsahovat katalog a záznamy zboží, umístění a účtu.");
         return;
       }
-      setLists(parsed);
-      setEditing(null);
+      setStore(parsed);
+      setEditingId(null);
       setUndo(null);
     } catch {
       window.alert("Soubor se nepodařilo přečíst. Očekává se JSON export z této stránky.");
     }
+  }
+
+  if (!signedIn) {
+    return (
+      <div className="cn-app">
+        <div className="cn-wrap cn-login-wrap">
+          <div className="cn-panel cn-login">
+            <p className="cn-kicker">ČÍSELNÍKY</p>
+            <h1>Přihlášení</h1>
+            <p className="cn-lead">
+              Zadejte e-mail a heslo. Pak uvidíte, jaké zboží je na jakém umístění a na jakém
+              účtu.
+            </p>
+            <form className="cn-login-form" onSubmit={login}>
+              <label>
+                E-mail
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Heslo
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+              </label>
+              {loginError ? <p className="cn-error">{loginError}</p> : null}
+              <button className="cn-btn cn-btn-primary" type="submit" disabled={loginPending}>
+                {loginPending ? "Přihlašuji…" : "Přihlásit"}
+              </button>
+            </form>
+            <Link className="cn-btn cn-btn-ghost" href="/">
+              Zpět na aukce
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -284,14 +379,14 @@ export function CiselnikyBoard() {
         <div className="cn-top">
           <div>
             <p className="cn-kicker">ČÍSELNÍKY</p>
-            <h1>Zboží, umístění a účet</h1>
+            <h1>Zboží na umístění a účtu</h1>
             <p className="cn-lead">
-              Každý sloupec je vlastní seznam. Položky přidáte, přejmenujete nebo smažete
-              a zůstanou uložené v tomto prohlížeči.
+              Jeden záznam = jaké zboží, kde leží a na jakém účtu. Nový název v poli se přidá do
+              číselníku.
             </p>
           </div>
           <div className="cn-actions">
-            <button type="button" className="cn-btn" onClick={exportLists}>
+            <button type="button" className="cn-btn" onClick={exportStore}>
               Export
             </button>
             <button type="button" className="cn-btn" onClick={() => fileRef.current?.click()}>
@@ -305,147 +400,208 @@ export function CiselnikyBoard() {
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = "";
-                if (file) void importLists(file);
+                if (file) void importStore(file);
               }}
             />
+            <button type="button" className="cn-btn" onClick={() => void logout()}>
+              Odhlásit
+            </button>
             <Link className="cn-btn cn-btn-ghost" href="/">
               Zpět na aukce
             </Link>
           </div>
         </div>
 
-        <div className="cn-board">
-          {COLUMNS.map((column) => (
-            <div className="cn-col" key={column.key} role="region" aria-labelledby={`cn-${column.key}`}>
-              <div className="cn-col-head">
-                <div>
-                  <h2 id={`cn-${column.key}`}>{column.title}</h2>
-                  <p>{column.hint}</p>
-                </div>
-                <span className="cn-count">{lists[column.key].length}</span>
-              </div>
+        <form className="cn-panel cn-record-form" onSubmit={addRow}>
+          <Field
+            id="add-zbozi"
+            label="Zboží"
+            options={store.catalog.zbozi}
+            value={draft.zbozi}
+            placeholder="Roleta den a noc"
+            onChange={(value) => {
+              setDraft((prev) => ({ ...prev, zbozi: value }));
+              setFormError("");
+            }}
+          />
+          <Field
+            id="add-umisteni"
+            label="Umístění"
+            options={store.catalog.umisteni}
+            value={draft.umisteni}
+            placeholder="Sklad Ostrava"
+            onChange={(value) => {
+              setDraft((prev) => ({ ...prev, umisteni: value }));
+              setFormError("");
+            }}
+          />
+          <Field
+            id="add-ucet"
+            label="Účet"
+            options={store.catalog.ucet}
+            value={draft.ucet}
+            placeholder="Pokladna"
+            onChange={(value) => {
+              setDraft((prev) => ({ ...prev, ucet: value }));
+              setFormError("");
+            }}
+          />
+          <label>
+            Poznámka
+            <input
+              value={draft.note}
+              maxLength={200}
+              placeholder="Volitelné"
+              onChange={(event) => setDraft((prev) => ({ ...prev, note: event.target.value }))}
+            />
+          </label>
+          <button className="cn-btn cn-btn-primary" type="submit">
+            Přidat záznam
+          </button>
+        </form>
+        {formError ? <p className="cn-error">{formError}</p> : null}
 
+        <label className="cn-search cn-search-wide">
+          <span className="cn-sr">Hledat</span>
+          <input
+            value={query}
+            placeholder="Hledat ve zboží, umístění i účtu"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+
+        <div className="cn-panel cn-table-wrap">
+          <table className="cn-table">
+            <thead>
+              <tr>
+                <th>Zboží</th>
+                <th>Umístění</th>
+                <th>Účet</th>
+                <th>Poznámka</th>
+                <th>
+                  <span className="cn-sr">Akce</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="cn-empty-cell">
+                    {store.rows.length === 0
+                      ? "Zatím tu nic není. Přidejte první záznam."
+                      : "Nic neodpovídá hledání."}
+                  </td>
+                </tr>
+              ) : (
+                visible.map((row) =>
+                  editingId === row.id ? (
+                    <tr key={row.id} className="cn-editing">
+                      <td colSpan={5}>
+                        <form className="cn-record-form cn-edit-row" onSubmit={saveEdit}>
+                          <Field
+                            id="edit-zbozi"
+                            label="Zboží"
+                            options={store.catalog.zbozi}
+                            value={editDraft.zbozi}
+                            onChange={(value) => setEditDraft((prev) => ({ ...prev, zbozi: value }))}
+                          />
+                          <Field
+                            id="edit-umisteni"
+                            label="Umístění"
+                            options={store.catalog.umisteni}
+                            value={editDraft.umisteni}
+                            onChange={(value) =>
+                              setEditDraft((prev) => ({ ...prev, umisteni: value }))
+                            }
+                          />
+                          <Field
+                            id="edit-ucet"
+                            label="Účet"
+                            options={store.catalog.ucet}
+                            value={editDraft.ucet}
+                            onChange={(value) => setEditDraft((prev) => ({ ...prev, ucet: value }))}
+                          />
+                          <label>
+                            Poznámka
+                            <input
+                              value={editDraft.note}
+                              maxLength={200}
+                              onChange={(event) =>
+                                setEditDraft((prev) => ({ ...prev, note: event.target.value }))
+                              }
+                            />
+                          </label>
+                          <div className="cn-edit-actions">
+                            <button className="cn-btn cn-btn-primary" type="submit">
+                              Uložit
+                            </button>
+                            <button
+                              className="cn-btn"
+                              type="button"
+                              onClick={() => setEditingId(null)}
+                            >
+                              Zrušit
+                            </button>
+                          </div>
+                        </form>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={row.id}>
+                      <td>
+                        <strong>{row.zbozi}</strong>
+                      </td>
+                      <td>{row.umisteni}</td>
+                      <td>{row.ucet}</td>
+                      <td className="cn-note">{row.note || "—"}</td>
+                      <td>
+                        <div className="cn-row-actions">
+                          <button type="button" onClick={() => startEdit(row)}>
+                            Upravit
+                          </button>
+                          <button type="button" onClick={() => removeRow(row)}>
+                            Smazat
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ),
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="cn-catalogs">
+          {(["zbozi", "umisteni", "ucet"] as const).map((key) => (
+            <div className="cn-panel cn-catalog" key={key}>
+              <h2>{CATALOG_LABEL[key]}</h2>
+              <p>Hodnoty, ze kterých se skládá záznam. Doplníte je sem nebo novým názvem výše.</p>
               <form
                 className="cn-add"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  addItem(column.key);
+                  addCatalogName(key);
                 }}
               >
-                <label className="cn-sr" htmlFor={`add-${column.key}`}>
-                  {column.placeholder}
+                <label className="cn-sr" htmlFor={`cat-${key}`}>
+                  Nová hodnota {CATALOG_LABEL[key]}
                 </label>
                 <input
-                  id={`add-${column.key}`}
-                  value={drafts[column.key]}
-                  placeholder={column.placeholder}
+                  id={`cat-${key}`}
+                  value={catalogDraft[key]}
                   maxLength={80}
-                  onChange={(event) => {
-                    setDrafts((prev) => ({ ...prev, [column.key]: event.target.value }));
-                    setErrors((prev) => ({ ...prev, [column.key]: undefined }));
-                  }}
-                />
-                <button type="submit">Přidat</button>
-              </form>
-              {errors[column.key] ? <p className="cn-error">{errors[column.key]}</p> : null}
-
-              <label className="cn-search">
-                <span className="cn-sr">Hledat v {column.title}</span>
-                <input
-                  value={queries[column.key]}
-                  placeholder="Hledat"
+                  placeholder={`Nové ${CATALOG_LABEL[key].toLocaleLowerCase("cs")}`}
                   onChange={(event) =>
-                    setQueries((prev) => ({ ...prev, [column.key]: event.target.value }))
+                    setCatalogDraft((prev) => ({ ...prev, [key]: event.target.value }))
                   }
                 />
-              </label>
-
-              <ul className="cn-list">
-                {visible[column.key].length === 0 ? (
-                  <li className="cn-empty">
-                    {lists[column.key].length === 0
-                      ? "Zatím tu nic není. Přidejte první položku."
-                      : "Nic neodpovídá hledání."}
-                  </li>
-                ) : (
-                  visible[column.key].map((entry) => {
-                    const open = editing?.column === column.key && editing.id === entry.id;
-                    return (
-                      <li className="cn-item" key={entry.id}>
-                        {open ? (
-                          <form
-                            className="cn-edit"
-                            onSubmit={(event) => {
-                              event.preventDefault();
-                              saveEdit();
-                            }}
-                          >
-                            <label>
-                              Kód
-                              <input
-                                value={editDraft.code}
-                                maxLength={16}
-                                onChange={(event) =>
-                                  setEditDraft((prev) => ({ ...prev, code: event.target.value }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              Název
-                              <input
-                                value={editDraft.name}
-                                maxLength={80}
-                                autoFocus
-                                onChange={(event) =>
-                                  setEditDraft((prev) => ({ ...prev, name: event.target.value }))
-                                }
-                              />
-                            </label>
-                            <label>
-                              Poznámka
-                              <input
-                                value={editDraft.note}
-                                maxLength={200}
-                                onChange={(event) =>
-                                  setEditDraft((prev) => ({ ...prev, note: event.target.value }))
-                                }
-                              />
-                            </label>
-                            {editError ? <p className="cn-error">{editError}</p> : null}
-                            <div className="cn-edit-actions">
-                              <button type="submit" className="cn-btn cn-btn-primary">
-                                Uložit
-                              </button>
-                              <button
-                                type="button"
-                                className="cn-btn"
-                                onClick={() => setEditing(null)}
-                              >
-                                Zrušit
-                              </button>
-                            </div>
-                          </form>
-                        ) : (
-                          <div className="cn-row">
-                            <span className="cn-code">{entry.code}</span>
-                            <div className="cn-name">
-                              <strong>{entry.name}</strong>
-                              {entry.note ? <small>{entry.note}</small> : null}
-                            </div>
-                            <div className="cn-row-actions">
-                              <button type="button" onClick={() => startEdit(column.key, entry)}>
-                                Upravit
-                              </button>
-                              <button type="button" onClick={() => removeItem(column.key, entry)}>
-                                Smazat
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })
-                )}
+                <button type="submit">Doplnit</button>
+              </form>
+              <ul>
+                {store.catalog[key].map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
               </ul>
             </div>
           ))}
@@ -453,14 +609,14 @@ export function CiselnikyBoard() {
 
         <p className="cn-foot">
           {ready
-            ? "Seznamy jsou uložené v tomto prohlížeči. Export je zkopíruje do souboru."
+            ? "Záznamy jsou uložené v tomto prohlížeči. Export je zkopíruje do souboru."
             : "Načítám uložené číselníky…"}
         </p>
 
         {undo ? (
           <div className="cn-undo" role="status">
             <span>
-              Smazáno: <strong>{undo.entry.name}</strong>
+              Smazáno: <strong>{undo.row.zbozi}</strong> / {undo.row.umisteni} / {undo.row.ucet}
             </span>
             <button type="button" onClick={restoreUndo}>
               Vrátit
@@ -472,5 +628,41 @@ export function CiselnikyBoard() {
         ) : null}
       </div>
     </div>
+  );
+}
+
+function Field({
+  id,
+  label,
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  options: string[];
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+}) {
+  const listId = `${id}-options`;
+  return (
+    <label>
+      {label}
+      <input
+        id={id}
+        list={listId}
+        value={value}
+        maxLength={80}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <datalist id={listId}>
+        {options.map((name) => (
+          <option value={name} key={name} />
+        ))}
+      </datalist>
+    </label>
   );
 }
