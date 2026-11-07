@@ -19,6 +19,9 @@ export function SiteHeader({
       {nav ? <nav>{nav}</nav> : <nav aria-hidden="true" />}
       <div className="header-actions">
         {actions}
+        <Link className="btn secondary" href="/ciselniky">
+          Číselníky
+        </Link>
         {showAdmin && (
           <Link className="btn secondary" href="/sprava">
             Administrace
