@@ -273,7 +273,7 @@ export default async function Home({
           </article>
         </div>
       </section>
-      <footer>Aukceee na dobrou věc · První funkční základ</footer>
+      <footer>Aukceee na dobrou věc</footer>
     </main>
   );
 }

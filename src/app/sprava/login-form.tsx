@@ -43,9 +43,6 @@ export function AdminLoginForm({ configured }: { configured: boolean }) {
 
   return (
     <form className="create-form" onSubmit={onSubmit}>
-      <p className="notice bid-warn">
-        Heslo je hodnota <code>ADMIN_SECRET</code> z Vercelu.
-      </p>
       {!configured && (
         <p className="bid-error">
           Mazání je vypnuté: chybí env <code>ADMIN_SECRET</code>.
