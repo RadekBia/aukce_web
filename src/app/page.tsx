@@ -107,7 +107,7 @@ export default async function Home({
         <h2 id="pomahame-nadpis">Komu společně pomáháme?</h2>
         <div className="causes">
           <article>
-            <h3>Pomoc k léčbě pro Patríčka</h3>
+            <h3>Pomoc k léčbě pro Patrička</h3>
             <p>
               Pomozme malému Patričkovi, který bojuje s Duchennovou svalovou
               dystrofií. Příspěvky podpoří jeho léčbu a péči o něj.
