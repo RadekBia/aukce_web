@@ -81,15 +81,23 @@ export default async function Home({
         }
       />
       <section className="hero">
-        <p>DEJTE VĚCEM DRUHOU ŠANCI</p>
-        <h1>
-          Co už nepotřebujete,
-          <br />
-          může někomu udělat radost.
-        </h1>
-        <div>
-          Jednoduché aukce použitých věcí. Prodávejte, přihazujte a objevujte
-          výhodné úlovky.
+        <p className="hero-kicker">DRAŽÍMEEE, POMÁHÁMEEE! 💚</p>
+        <h1>Jedna věc může udělat radost hned dvakrát.</h1>
+        <div className="hero-copy">
+          <p>
+            Každý z nás má doma něco, co už nepotřebuje. A právě taková věc
+            může získat nový domov a zároveň pomoci dobré věci. Zapojte se do
+            naší firemní aukce, nabídněte něco ze svého domova nebo přihazujte
+            na předměty ostatních kolegů.
+          </p>
+          <p className="hero-emph">
+            Místo placení původnímu majiteli věnujete vydraženou částku na
+            dobročinnou sbírku.
+          </p>
+          <p>
+            Vy získáte něco nového, věci dostanou druhou šanci a společně
+            dokážeme pomoci tam, kde je to potřeba.
+          </p>
         </div>
         <a className="btn" href="#aukce">
           Prohlédnout aukce
