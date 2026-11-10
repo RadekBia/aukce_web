@@ -103,6 +103,56 @@ export default async function Home({
           Prohlédnout aukce
         </a>
       </section>
+      <section className="how" id="pomahame" aria-labelledby="pomahame-nadpis">
+        <h2 id="pomahame-nadpis">Komu společně pomáháme?</h2>
+        <div className="causes">
+          <article>
+            <h3>Pomoc k léčbě pro Patríčka</h3>
+            <p>
+              Pomozme malému Patričkovi, který bojuje s Duchennovou svalovou
+              dystrofií. Příspěvky podpoří jeho léčbu a péči o něj.
+            </p>
+            <a
+              className="cause-link"
+              href="https://donio.cz/pomoc-k-lecbe-pro-patricka-s-duchennobou-svalovou-dystrofii"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Přejít na sbírku
+            </a>
+          </article>
+          <article>
+            <h3>Zachraňte útulek Adoptuj psího parťáka</h3>
+            <p>
+              Pomozme zachovat bezpečné zázemí pro opuštěné pejsky, kteří
+              čekají na svou druhou šanci a milující domov.
+            </p>
+            <a
+              className="cause-link"
+              href="https://donio.cz/zachrante-utulek-adoptuj-psiho-partaka-z-s"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Přejít na sbírku
+            </a>
+          </article>
+          <article>
+            <h3>Za Zdravé Dělohy</h3>
+            <p>
+              Podpořme osvětu o endometrióze, včasnější diagnostiku a lepší
+              dostupnost péče pro ženy, které s tímto onemocněním žijí.
+            </p>
+            <a
+              className="cause-link"
+              href="https://www.darujme.cz/zazdravedelohy"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Přejít na sbírku
+            </a>
+          </article>
+        </div>
+      </section>
       <section id="aukce">
         <p className="eyebrow">PRÁVĚ SE DRAŽÍ</p>
         <h2>Aktuální aukce</h2>
