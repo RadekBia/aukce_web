@@ -199,18 +199,26 @@ export default async function Home({
           <article>
             <b>1</b>
             <h3>Vložte předmět</h3>
-            <p>Přidejte fotku, popis a vyvolávací cenu.</p>
+            <p>
+              Máš doma něco navíc? Vyfoť to, přidej popis a stav. Pak už jen
+              sleduj příhozy. Vyvolávací cena je u všech předmětů stejná, aby
+              se věci opravdu posunuly dále.
+            </p>
           </article>
           <article>
             <b>2</b>
-            <h3>Přihazujte</h3>
-            <p>Najděte zajímavou věc a nabídněte svou cenu.</p>
+            <h3>Přihazuj a pomáhej</h3>
+            <p>
+              Vyberte si, co se vám líbí, a přihoďte. Nejvyšší nabídka při
+              ukončení aukce vyhrává.
+            </p>
           </article>
           <article>
             <b>3</b>
-            <h3>Domluvte se</h3>
+            <h3>Přispějte a převezměte si věc</h3>
             <p>
-              Po skončení aukce se prodávající a vítěz domluví na předání.
+              Výherce pošle částku na vybranou sbírku, doloží potvrzení, které
+              dorazí na mail a s majitelem se domluví na předání.
             </p>
           </article>
         </div>
