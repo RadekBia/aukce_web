@@ -268,7 +268,7 @@ export default async function Home({
             <h3>Přispějte a převezměte si věc</h3>
             <p>
               Výherce pošle částku na vybranou sbírku, doloží potvrzení, které
-              dorazí na mail a s majitelem se domluví na předání.
+              dorazí na e-mail a s majitelem se domluví na předání.
             </p>
           </article>
         </div>
