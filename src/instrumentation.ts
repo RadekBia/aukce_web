@@ -16,11 +16,5 @@ export async function register() {
   const { ensureDatabaseEnv } = await import("@/lib/runtime-env");
   const { runMigrateDeploy } = await import("@/lib/migrate-deploy");
   ensureDatabaseEnv();
-  globalThis.__aukceMigrate = await runMigrateDeploy();
-}
-
-declare global {
-  var __aukceMigrate:
-    | { ok: boolean; exitCode: number; settled: boolean }
-    | undefined;
+  await runMigrateDeploy();
 }
