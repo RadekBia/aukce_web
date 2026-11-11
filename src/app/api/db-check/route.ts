@@ -69,6 +69,7 @@ export async function GET() {
     database: describeUrl(databaseUrl),
     direct: describeUrl(directUrl),
     engineFiles: engineFiles(),
+    migrate: globalThis.__aukceMigrate ?? null,
   };
 
   const prisma = new PrismaClient(
