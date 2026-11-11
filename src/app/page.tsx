@@ -3,6 +3,7 @@ import { AuctionCountdown } from "@/components/auction-countdown";
 import { SiteHeader } from "@/components/site-header";
 import { coverImageUrl } from "@/lib/auction-images";
 import { sellerDisplayName } from "@/lib/auction-rules";
+import { resolveAuctionWinner } from "@/lib/auction-winner";
 import { prisma } from "@/lib/prisma";
 import { dbErrorCode } from "@/lib/runtime-env";
 
@@ -33,6 +34,8 @@ export default async function Home({
     >
   > = [];
   let categories: string[] = [];
+  let ended: { id: string; title: string; currentPrice: number; winner: string }[] =
+    [];
   let db = true;
 
   try {
@@ -41,7 +44,7 @@ export default async function Home({
       endsAt: { gt: new Date() },
     };
 
-    const [rows, distinct] = await Promise.all([
+    const [rows, distinct, endedRows] = await Promise.all([
       prisma.auction.findMany({
         where: {
           ...activeWhere,
@@ -59,9 +62,38 @@ export default async function Home({
         select: { category: true },
         orderBy: { category: "asc" },
       }),
+      prisma.auction.findMany({
+        where: {
+          endsAt: { lte: new Date() },
+          status: { in: ["ACTIVE", "ENDED"] },
+        },
+        orderBy: { endsAt: "desc" },
+        take: 40,
+        select: {
+          id: true,
+          title: true,
+          currentPrice: true,
+          winnerFirstName: true,
+          winnerLastName: true,
+          bids: {
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            select: { bidderId: true },
+          },
+        },
+      }),
     ]);
     auctions = rows;
     categories = distinct.map((d) => d.category).filter(Boolean);
+    ended = endedRows.map((a) => ({
+      id: a.id,
+      title: a.title,
+      currentPrice: a.currentPrice,
+      winner: resolveAuctionWinner({
+        winnerFirstName: a.winnerFirstName,
+        winnerLastName: a.winnerLastName,
+        bidsAsc: a.bids,
+      }).display,
+    }));
   } catch (err) {
     db = false;
     console.error("homepage query failed", dbErrorCode(err));
@@ -245,6 +277,32 @@ export default async function Home({
           })}
         </div>
       </section>
+      {db && (
+        <section id="ukoncene">
+          <p className="eyebrow">VÝSLEDKY</p>
+          <h2>Ukončené aukce</h2>
+          {ended.length === 0 ? (
+            <p>Zatím tu nejsou ukončené aukce.</p>
+          ) : (
+            <div className="grid">
+              {ended.map((a) => (
+                <article className="card" key={a.id}>
+                  <div className="body">
+                    <h3>
+                      <Link href={`/aukce/${a.id}`}>{a.title}</Link>
+                    </h3>
+                    <p className="card-condition">Konečná cena</p>
+                    <strong>{money(a.currentPrice)}</strong>
+                    <p>
+                      Vítěz: <strong>{a.winner}</strong>
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <section id="jak" className="how">
         <h2>Jak to funguje?</h2>
         <div className="steps">
