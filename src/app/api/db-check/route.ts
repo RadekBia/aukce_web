@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { prisma as sharedPrisma } from "@/lib/prisma";
 import { readRuntimeEnv } from "@/lib/runtime-env";
 
 export const runtime = "nodejs";
@@ -38,14 +39,16 @@ function describeUrl(raw: string | undefined) {
 }
 
 function scrub(message: string): string {
-  return message
+  const cleaned = message
     .replace(/postgres(?:ql)?:\/\/\S+/gi, "<url>")
     .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, "<ip>")
     .replace(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b/gi, "<host>")
     .replace(/:[0-9]{2,5}\b/g, ":<port>")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 400);
+    .trim();
+  const marker = cleaned.lastIndexOf("invocation");
+  const focus = marker >= 0 ? cleaned.slice(marker) : cleaned;
+  return focus.slice(0, 500);
 }
 
 function engineFiles(): string[] {
@@ -71,24 +74,33 @@ export async function GET() {
   const prisma = new PrismaClient(
     databaseUrl ? { datasourceUrl: databaseUrl } : undefined,
   );
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    body.query = "ok";
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const record = err as { code?: unknown; errorCode?: unknown; name?: unknown };
-    body.query = "fail";
-    body.name = typeof record.name === "string" ? record.name : "Error";
-    body.code =
-      typeof record.code === "string"
-        ? record.code
-        : typeof record.errorCode === "string"
-          ? record.errorCode
-          : null;
-    body.reason = scrub(message);
-  } finally {
-    await prisma.$disconnect().catch(() => undefined);
+  async function probe(
+    label: string,
+    run: () => Promise<unknown>,
+  ): Promise<void> {
+    try {
+      await run();
+      body[label] = "ok";
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const record = err as { code?: unknown; errorCode?: unknown; name?: unknown };
+      body[label] = {
+        name: typeof record.name === "string" ? record.name : "Error",
+        code:
+          typeof record.code === "string"
+            ? record.code
+            : typeof record.errorCode === "string"
+              ? record.errorCode
+              : null,
+        reason: scrub(message),
+      };
+    }
   }
+
+  await probe("select1", () => prisma.$queryRaw`SELECT 1`);
+  await probe("freshFind", () => prisma.auction.findMany({ take: 1 }));
+  await probe("sharedFind", () => sharedPrisma.auction.findMany({ take: 1 }));
+  await prisma.$disconnect().catch(() => undefined);
 
   return NextResponse.json(body);
 }
