@@ -1,18 +1,15 @@
 /**
  * Shared auction business rules (create / bid / display).
- * A new auction ends five minutes after it is created.
- * Times are absolute instants; the UI shows them in Europe/Prague.
+ * End: 26. 11. 2026 23:59 Europe/Prague (= 22:59 UTC).
  */
 export const AUCTION_STARTING_PRICE = 1;
 export const MIN_BID_RAISE = 10;
 
-/** How long a newly created auction stays open. */
-export const AUCTION_DURATION_MS = 5 * 60 * 1000;
+/** Fixed end instant for every auction. */
+export const AUCTION_ENDS_AT = new Date("2026-11-26T22:59:00.000Z");
 
-/** End instant: five minutes after `from` (default: now). */
-export function auctionEndsAt(from: Date = new Date()): Date {
-  return new Date(from.getTime() + AUCTION_DURATION_MS);
-}
+/** Czech label for the fixed end (Europe/Prague wall clock). */
+export const AUCTION_ENDS_LABEL_CS = "26. 11. 2026 23:59";
 
 export function sellerDisplayName(
   firstName: string,

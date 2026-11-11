@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { AUCTION_STARTING_PRICE, auctionEndsAt } from "../src/lib/auction-rules";
+import { AUCTION_ENDS_AT, AUCTION_STARTING_PRICE } from "../src/lib/auction-rules";
 
 const db = new PrismaClient();
 
@@ -46,7 +46,7 @@ async function main() {
   if (await db.auction.count()) return;
   for (const item of data) {
     await db.auction.create({
-      data: { ...item, endsAt: auctionEndsAt() },
+      data: { ...item, endsAt: AUCTION_ENDS_AT },
     });
   }
   console.log("Ukázkové aukce vloženy.");

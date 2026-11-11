@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { storedImagePath } from "@/lib/auction-images";
 import {
+  AUCTION_ENDS_AT,
   AUCTION_STARTING_PRICE,
-  auctionEndsAt,
 } from "@/lib/auction-rules";
 import { isUnauthenticatedAuctionCreationEnabled } from "@/lib/flags";
 import { prisma } from "@/lib/prisma";
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
         imageUrls: displayUrls,
         startingPrice: AUCTION_STARTING_PRICE,
         currentPrice: AUCTION_STARTING_PRICE,
-        endsAt: auctionEndsAt(),
+        endsAt: AUCTION_ENDS_AT,
       },
     });
 
