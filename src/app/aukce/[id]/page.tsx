@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuctionCountdown } from "@/components/auction-countdown";
+import { AuctionPhoto } from "@/components/auction-photo";
 import { SiteHeader } from "@/components/site-header";
 import { auctionImageList } from "@/lib/auction-images";
 import { sellerDisplayName } from "@/lib/auction-rules";
@@ -90,10 +91,10 @@ export default async function AuctionDetail({
             {images.length > 0 && (
               <div className="detail-gallery">
                 {images.map((src, i) => (
-                  <img
+                  <AuctionPhoto
                     key={src}
-                    className={i === 0 ? "detail-image" : "detail-image thumb"}
                     src={src}
+                    imgClassName={i === 0 ? "detail-image" : "detail-image thumb"}
                     alt={`${auction.title} — fotka ${i + 1}`}
                   />
                 ))}

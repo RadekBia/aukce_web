@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuctionCountdown } from "@/components/auction-countdown";
+import { AuctionPhoto } from "@/components/auction-photo";
 import { SiteHeader } from "@/components/site-header";
 import { coverImageUrl } from "@/lib/auction-images";
 import { sellerDisplayName } from "@/lib/auction-rules";
@@ -238,7 +239,7 @@ export default async function Home({
               <article className="card" key={a.id}>
                 {cover && (
                   <div className="card-media">
-                    <img src={cover} alt={a.title} />
+                    <AuctionPhoto src={cover} alt={a.title} />
                     {extra > 0 && (
                       <span className="card-media-badge">+{extra} fotek</span>
                     )}
