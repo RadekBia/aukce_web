@@ -6,10 +6,7 @@ import {
   BROWSER_MAX_ORIGINAL_BYTES,
   compressImageInBrowser,
 } from "@/lib/browser-compress";
-import {
-  AUCTION_ENDS_LABEL_CS,
-  AUCTION_STARTING_PRICE,
-} from "@/lib/auction-rules";
+import { AUCTION_STARTING_PRICE } from "@/lib/auction-rules";
 
 const CATEGORIES = [
   "Domácnost",
@@ -250,7 +247,7 @@ export function CreateAuctionForm() {
 
       <p className="bid-hint">
         Vyvolávací cena: <strong>{AUCTION_STARTING_PRICE}&nbsp;Kč</strong>.
-        Konec aukce: <strong>{AUCTION_ENDS_LABEL_CS}</strong> (nelze změnit).
+        Konec aukce: <strong>5 minut po vytvoření</strong>.
       </p>
 
       {error && <p className="bid-error">{error}</p>}
