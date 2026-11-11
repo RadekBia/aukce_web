@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { coverImageUrl } from "@/lib/auction-images";
 import { sellerDisplayName } from "@/lib/auction-rules";
 import { prisma } from "@/lib/prisma";
+import { dbErrorCode } from "@/lib/runtime-env";
 
 export const dynamic = "force-dynamic";
 
@@ -61,8 +62,9 @@ export default async function Home({
     ]);
     auctions = rows;
     categories = distinct.map((d) => d.category).filter(Boolean);
-  } catch {
+  } catch (err) {
     db = false;
+    console.error("homepage query failed", dbErrorCode(err));
   }
 
   return (

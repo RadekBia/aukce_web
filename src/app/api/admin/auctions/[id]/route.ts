@@ -28,7 +28,7 @@ async function requireAdmin() {
     return NextResponse.json(
       {
         error:
-          "Administrace je vypnutá — chybí ADMIN_SECRET. Nastavte ho ve Vercelu a znovu nasaďte aplikaci.",
+          "Administrace je vypnutá — chybí ADMIN_SECRET. Nastavte ho v prostředí služby a znovu nasaďte aplikaci.",
       },
       { status: 403 },
     );

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "Administrace není nastavená. Na Vercelu přidejte env proměnnou ADMIN_SECRET a znovu nasaďte aplikaci.",
+          "Administrace není nastavená. Nastavte env proměnnou ADMIN_SECRET a znovu nasaďte aplikaci.",
       },
       { status: 403 },
     );

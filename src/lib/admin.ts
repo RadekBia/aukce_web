@@ -1,12 +1,12 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { readRuntimeEnv } from "@/lib/runtime-env";
 
 export const ADMIN_COOKIE = "aukce_admin";
 
-/** Raw ADMIN_SECRET from env, or null when unset (delete stays disabled). */
+/** Raw ADMIN_SECRET from the runtime env, or null when unset. */
 export function getAdminSecret(): string | null {
-  const s = process.env.ADMIN_SECRET?.trim();
-  return s ? s : null;
+  return readRuntimeEnv("ADMIN_SECRET") ?? null;
 }
 
 export function isAdminConfigured(): boolean {

@@ -14,7 +14,7 @@ export function AdminLoginForm({ configured }: { configured: boolean }) {
     setError(null);
     if (!configured) {
       setError(
-        "Administrace není nastavená. Na Vercelu přidejte ADMIN_SECRET a znovu nasaďte aplikaci.",
+        "Administrace není nastavená. Nastavte ADMIN_SECRET a znovu nasaďte aplikaci.",
       );
       return;
     }

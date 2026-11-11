@@ -4,6 +4,7 @@ import { isAdminConfigured, isAdminSession } from "@/lib/admin";
 import { resolveAuctionWinner } from "@/lib/auction-winner";
 import { runningTotalsAfterBids } from "@/lib/recompute-auction-price";
 import { prisma } from "@/lib/prisma";
+import { dbErrorCode } from "@/lib/runtime-env";
 import { AdminPanel } from "./admin-panel";
 import { AdminLoginForm } from "./login-form";
 
@@ -49,98 +50,104 @@ export default async function SpravaPage({
     auctionId: string;
     auctionTitle: string;
   }[] = [];
+  let dbOk = true;
 
   if (loggedIn) {
-    const [rows, bidRows] = await Promise.all([
-      prisma.auction.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          _count: { select: { bids: true } },
-          bids: {
-            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-            select: { bidderId: true },
+    try {
+      const [rows, bidRows] = await Promise.all([
+        prisma.auction.findMany({
+          orderBy: { createdAt: "desc" },
+          include: {
+            _count: { select: { bids: true } },
+            bids: {
+              orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+              select: { bidderId: true },
+            },
           },
-        },
-        take: 200,
-      }),
-      prisma.bid.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 100,
-        include: {
-          auction: {
-            select: { id: true, title: true, startingPrice: true },
+          take: 200,
+        }),
+        prisma.bid.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 100,
+          include: {
+            auction: {
+              select: { id: true, title: true, startingPrice: true },
+            },
           },
-        },
-      }),
-    ]);
+        }),
+      ]);
 
-    auctions = rows.map((a) => ({
-      id: a.id,
-      title: a.title,
-      status: a.status,
-      currentPrice: a.currentPrice,
-      endsAt: a.endsAt.toISOString(),
-      bidCount: a._count.bids,
-    }));
-
-    winners = rows.map((a) => {
-      const effective = resolveAuctionWinner({
-        winnerFirstName: a.winnerFirstName,
-        winnerLastName: a.winnerLastName,
-        bidsAsc: a.bids,
-      });
-      const fromBid = resolveAuctionWinner({
-        winnerFirstName: null,
-        winnerLastName: null,
-        bidsAsc: a.bids,
-      });
-      return {
+      auctions = rows.map((a) => ({
         id: a.id,
         title: a.title,
+        status: a.status,
         currentPrice: a.currentPrice,
-        display: effective.display,
-        source: effective.source,
-        overrideFirstName: a.winnerFirstName ?? "",
-        overrideLastName: a.winnerLastName ?? "",
-        defaultFirstName: fromBid.firstName,
-        defaultLastName: fromBid.lastName,
-      };
-    });
+        endsAt: a.endsAt.toISOString(),
+        bidCount: a._count.bids,
+      }));
 
-    const auctionIds = Array.from(new Set(bidRows.map((b) => b.auctionId)));
-    const startingByAuction = new Map(
-      bidRows.map((b) => [b.auctionId, b.auction.startingPrice] as const),
-    );
+      winners = rows.map((a) => {
+        const effective = resolveAuctionWinner({
+          winnerFirstName: a.winnerFirstName,
+          winnerLastName: a.winnerLastName,
+          bidsAsc: a.bids,
+        });
+        const fromBid = resolveAuctionWinner({
+          winnerFirstName: null,
+          winnerLastName: null,
+          bidsAsc: a.bids,
+        });
+        return {
+          id: a.id,
+          title: a.title,
+          currentPrice: a.currentPrice,
+          display: effective.display,
+          source: effective.source,
+          overrideFirstName: a.winnerFirstName ?? "",
+          overrideLastName: a.winnerLastName ?? "",
+          defaultFirstName: fromBid.firstName,
+          defaultLastName: fromBid.lastName,
+        };
+      });
 
-    const allBidsAsc =
-      auctionIds.length === 0
-        ? []
-        : await prisma.bid.findMany({
-            where: { auctionId: { in: auctionIds } },
-            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-            select: { id: true, auctionId: true, amount: true },
-          });
+      const auctionIds = Array.from(new Set(bidRows.map((b) => b.auctionId)));
+      const startingByAuction = new Map(
+        bidRows.map((b) => [b.auctionId, b.auction.startingPrice] as const),
+      );
 
-    const resultingByBidId = new Map<string, number>();
-    for (const aid of auctionIds) {
-      const start = startingByAuction.get(aid) ?? 0;
-      const forAuction = allBidsAsc.filter((b) => b.auctionId === aid);
-      const totals = runningTotalsAfterBids(start, forAuction);
-      for (const [bidId, total] of totals) {
-        resultingByBidId.set(bidId, total);
+      const allBidsAsc =
+        auctionIds.length === 0
+          ? []
+          : await prisma.bid.findMany({
+              where: { auctionId: { in: auctionIds } },
+              orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+              select: { id: true, auctionId: true, amount: true },
+            });
+
+      const resultingByBidId = new Map<string, number>();
+      for (const aid of auctionIds) {
+        const start = startingByAuction.get(aid) ?? 0;
+        const forAuction = allBidsAsc.filter((b) => b.auctionId === aid);
+        const totals = runningTotalsAfterBids(start, forAuction);
+        for (const [bidId, total] of totals) {
+          resultingByBidId.set(bidId, total);
+        }
       }
-    }
 
-    bids = bidRows.map((b) => ({
-      id: b.id,
-      amount: b.amount,
-      resultingPrice:
-        resultingByBidId.get(b.id) ?? b.auction.startingPrice + b.amount,
-      bidderId: b.bidderId,
-      createdAt: b.createdAt.toISOString(),
-      auctionId: b.auction.id,
-      auctionTitle: b.auction.title,
-    }));
+      bids = bidRows.map((b) => ({
+        id: b.id,
+        amount: b.amount,
+        resultingPrice:
+          resultingByBidId.get(b.id) ?? b.auction.startingPrice + b.amount,
+        bidderId: b.bidderId,
+        createdAt: b.createdAt.toISOString(),
+        auctionId: b.auction.id,
+        auctionTitle: b.auction.title,
+      }));
+    } catch (err) {
+      dbOk = false;
+      console.error("sprava query failed", dbErrorCode(err));
+    }
   }
 
   return (
@@ -158,20 +165,25 @@ export default async function SpravaPage({
         <h1>Administrace aukcí</h1>
         {!configured && (
           <p className="bid-error">
-            Administrace je vypnutá — na Vercelu chybí env{" "}
-            <code>ADMIN_SECRET</code>. Přidejte ji a znovu nasaďte aplikaci.
+            Administrace je vypnutá — chybí env <code>ADMIN_SECRET</code>.
+            Nastavte ji v prostředí služby a znovu nasaďte aplikaci.
           </p>
         )}
-        {loggedIn ? (
+        {loggedIn && !dbOk && (
+          <p className="notice">
+            Databáze není připojena. Nastavte DATABASE_URL a spusťte migrace.
+          </p>
+        )}
+        {loggedIn && dbOk ? (
           <AdminPanel
             auctions={auctions}
             winners={winners}
             bids={bids}
             saved={saved}
           />
-        ) : (
+        ) : !loggedIn ? (
           <AdminLoginForm configured={configured} />
-        )}
+        ) : null}
       </section>
     </main>
   );

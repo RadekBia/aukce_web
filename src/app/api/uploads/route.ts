@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     if (data.length > IMAGE_MAX_STORED_BYTES) {
       return NextResponse.json(
         {
-          error: `Fotka „${file.name}“ je i po kompresi větší než 2 MB. Zkuste jednodušší / menší snímek.`,
+          error: `Fotka „${file.name}“ je i po kompresi větší než ${Math.round(IMAGE_MAX_STORED_BYTES / (1024 * 1024))} MB. Zkuste jednodušší / menší snímek.`,
         },
         { status: 400 },
       );
