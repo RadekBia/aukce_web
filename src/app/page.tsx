@@ -189,7 +189,7 @@ export default async function Home({
           <p>
             {selectedCategory
               ? `V kategorii „${selectedCategory}“ teď nejsou aktivní aukce.`
-              : "Zatím tu nejsou aktivní aukce. Spusťte seed podle README."}
+              : "Zatím tu nejsou aktivní aukce."}
           </p>
         )}
         <div className="grid">
