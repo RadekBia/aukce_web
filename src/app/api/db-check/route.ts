@@ -98,6 +98,29 @@ export async function GET() {
   }
 
   await probe("select1", () => prisma.$queryRaw`SELECT 1`);
+  try {
+    const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      ORDER BY table_name`;
+    body.tables = tables.map((row) => row.table_name);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    body.tables = { reason: scrub(message) };
+  }
+  if (databaseUrl && directUrl) {
+    try {
+      const left = new URL(databaseUrl);
+      const right = new URL(directUrl);
+      body.sameTarget =
+        left.hostname === right.hostname &&
+        left.port === right.port &&
+        left.pathname === right.pathname;
+    } catch {
+      body.sameTarget = false;
+    }
+  }
   await probe("freshFind", () => prisma.auction.findMany({ take: 1 }));
   await probe("sharedFind", () => sharedPrisma.auction.findMany({ take: 1 }));
   await prisma.$disconnect().catch(() => undefined);
