@@ -10,8 +10,8 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Client should already compress; stay under Vercel ~4.5 MB body limit. */
-const MAX_POST_BYTES = 4 * 1024 * 1024;
+/** Incoming file before the sharp pass. Railway’s Node server accepts a 20 MB body. */
+const MAX_POST_BYTES = 20 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /** Store one image in Neon (bytea). Prefer browser-precompressed WebP/JPEG. */
@@ -52,9 +52,10 @@ export async function POST(req: Request) {
     );
   }
   if (file.size > MAX_POST_BYTES) {
+    const limitMb = MAX_POST_BYTES / (1024 * 1024);
     return NextResponse.json(
       {
-        error: `Fotka „${file.name}“ je po kompresi stále příliš velká na nahrání (limit serveru cca 4,5 MB).`,
+        error: `Fotka „${file.name}“ je po kompresi stále příliš velká na nahrání (limit serveru ${limitMb} MB).`,
       },
       { status: 400 },
     );

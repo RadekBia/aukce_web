@@ -1,8 +1,8 @@
-/** Client-only helpers — compress before POST so 20 MB originals fit under Vercel’s ~4.5 MB body limit. */
+/** Client-only helpers — compress before POST. Originals and the POST body may each be up to 20 MB. */
 
 export const BROWSER_MAX_ORIGINAL_BYTES = 20 * 1024 * 1024;
-/** Stay under Vercel serverless body limit (~4.5 MB). */
-export const BROWSER_MAX_POST_BYTES = 4 * 1024 * 1024;
+/** Max compressed body accepted by POST /api/uploads (Railway Node server). */
+export const BROWSER_MAX_POST_BYTES = 20 * 1024 * 1024;
 export const BROWSER_QUALITY = 0.8;
 
 function canvasToBlob(
@@ -67,8 +67,9 @@ export async function compressImageInBrowser(file: File): Promise<File> {
   }
 
   if (blob.size > BROWSER_MAX_POST_BYTES) {
+    const limitMb = BROWSER_MAX_POST_BYTES / (1024 * 1024);
     throw new Error(
-      `Fotka „${file.name}“ je i po kompresi příliš velká na nahrání (limit serveru cca 4,5 MB). Zkuste jednodušší snímek.`,
+      `Fotka „${file.name}“ je i po kompresi příliš velká na nahrání (limit serveru ${limitMb} MB). Zkuste jednodušší snímek.`,
     );
   }
 
