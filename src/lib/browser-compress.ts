@@ -1,8 +1,8 @@
-/** Client-only helpers — compress before POST. Originals and the POST body may each be up to 20 MB. */
+/** Client-only helpers — compress before POST. Originals and the POST body may each be up to 100 MB. */
 
-export const BROWSER_MAX_ORIGINAL_BYTES = 20 * 1024 * 1024;
+export const BROWSER_MAX_ORIGINAL_BYTES = 100 * 1024 * 1024;
 /** Max compressed body accepted by POST /api/uploads (Railway Node server). */
-export const BROWSER_MAX_POST_BYTES = 20 * 1024 * 1024;
+export const BROWSER_MAX_POST_BYTES = 100 * 1024 * 1024;
 export const BROWSER_QUALITY = 0.8;
 
 function canvasToBlob(
@@ -28,8 +28,9 @@ function canvasToBlob(
  */
 export async function compressImageInBrowser(file: File): Promise<File> {
   if (file.size > BROWSER_MAX_ORIGINAL_BYTES) {
+    const limitMb = BROWSER_MAX_ORIGINAL_BYTES / (1024 * 1024);
     throw new Error(
-      `Soubor „${file.name}“ je větší než 20 MB. Vyberte menší fotku.`,
+      `Soubor „${file.name}“ je větší než ${limitMb} MB. Vyberte menší fotku.`,
     );
   }
 

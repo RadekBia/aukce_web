@@ -3,12 +3,12 @@ import sharp from "sharp";
 /** JPEG/WebP quality. */
 export const IMAGE_QUALITY = 80;
 /** Max stored size after compression. */
-export const IMAGE_MAX_STORED_BYTES = 20 * 1024 * 1024;
+export const IMAGE_MAX_STORED_BYTES = 100 * 1024 * 1024;
 
 /**
  * Server second-pass: WebP q80, strip EXIF after auto-orient.
  * Does not downscale by pixel dimensions.
- * Browser already compresses large (≤20 MB) originals first.
+ * Browser already compresses large (≤100 MB) originals first.
  */
 export async function compressAuctionImage(
   input: Buffer,

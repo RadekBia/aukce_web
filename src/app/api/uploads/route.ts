@@ -10,8 +10,8 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Incoming file before the sharp pass. Railway’s Node server accepts a 20 MB body. */
-const MAX_POST_BYTES = 20 * 1024 * 1024;
+/** Incoming file before the sharp pass. Railway’s Node server accepts a 100 MB body. */
+const MAX_POST_BYTES = 100 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /** Store one image in Neon (bytea). Prefer browser-precompressed WebP/JPEG. */

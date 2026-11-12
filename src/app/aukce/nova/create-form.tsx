@@ -187,8 +187,8 @@ export function CreateAuctionForm() {
         <legend>Přílohy — fotky z počítače</legend>
         <p className="bid-hint">
           1–{MAX_FILES} souborů (JPEG, PNG nebo WebP), každý až{" "}
-          <strong>20&nbsp;MB</strong>. Fotka se automaticky zkomprimuje
-          (bez omezení rozměrů v pixelech).
+          <strong>{BROWSER_MAX_ORIGINAL_BYTES / (1024 * 1024)}&nbsp;MB</strong>.
+          Fotka se automaticky zkomprimuje (bez omezení rozměrů v pixelech).
         </p>
         <label className="file-picker">
           <span className="btn secondary file-picker-btn">
@@ -207,8 +207,9 @@ export function CreateAuctionForm() {
                 (f) => f.size > BROWSER_MAX_ORIGINAL_BYTES,
               );
               if (tooBig) {
+                const limitMb = BROWSER_MAX_ORIGINAL_BYTES / (1024 * 1024);
                 setError(
-                  `Soubor „${tooBig.name}“ je větší než 20 MB. Vyberte menší fotku.`,
+                  `Soubor „${tooBig.name}“ je větší než ${limitMb} MB. Vyberte menší fotku.`,
                 );
               } else {
                 setError(null);
